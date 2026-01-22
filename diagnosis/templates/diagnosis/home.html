@@ -1,0 +1,54 @@
+{% extends 'diagnosis/base.html' %}
+
+{% block title %}Emergency RAG Diagnosis System{% endblock %}
+
+{% block content %}
+<section class="card" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; align-items: center;">
+    <div>
+        <p style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.75rem;">Precision Emergency Support</p>
+        <h1 class="card-header" style="font-size: 2.8rem; margin-bottom: 0.5rem;">Stabilize faster with evidence-backed triage intelligence.</h1>
+        <p style="color: var(--text-muted); font-size: 1.05rem; max-width: 520px;">
+            MedEmergency RAG fuses structured EHR capture, vector retrieval, and LLM-powered reasoning into a single cockpit for critical care teams.
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem;">
+            <a href="{% url 'login' %}" class="btn btn-primary" style="min-width: 160px;">Enter console</a>
+            <a href="{% url 'register' %}" class="btn btn-secondary" style="min-width: 160px;">Request access</a>
+        </div>
+    </div>
+    <div style="background: var(--surface-alt); border-radius: 18px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.05);">
+        <p style="color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem;">Live snapshot</p>
+        <div style="display: grid; gap: 1rem; margin-top: 1rem;">
+            <div style="display: flex; justify-content: space-between;">
+                <span>Total patients captured</span>
+                <strong style="color: var(--primary);">{{ total_patients|default:0 }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span>Triage runs today</span>
+                <strong style="color: var(--magenta);">{{ diagnoses_today|default:0 }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span>Knowledge base embeddings</span>
+                <strong style="color: var(--mint);">384-dim</strong>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="grid grid-3" style="margin-top: 2rem;">
+    <article class="card" style="margin-bottom: 0;">
+        <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(108,243,255,0.15); display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--primary);">01</div>
+        <h3 style="margin: 1rem 0 0.5rem;">Structured intake</h3>
+        <p style="color: var(--text-muted);">Capture vitals, labs, meds, and notes in a guided workflow tuned for emergency pacing.</p>
+    </article>
+    <article class="card" style="margin-bottom: 0;">
+        <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(156,140,255,0.15); display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--violet);">02</div>
+        <h3 style="margin: 1rem 0 0.5rem;">Context retrieval</h3>
+        <p style="color: var(--text-muted);">FAISS surfaces analogous MIMIC-style scenarios with rationale-ready notes.</p>
+    </article>
+    <article class="card" style="margin-bottom: 0;">
+        <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(92,226,177,0.15); display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--mint);">03</div>
+        <h3 style="margin: 1rem 0 0.5rem;">LLM reasoning</h3>
+        <p style="color: var(--text-muted);">Model cascade produces differential diagnoses, triage, and confidence with guardrailed prompts.</p>
+    </article>
+</section>
+{% endblock %}

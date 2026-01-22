@@ -1,0 +1,116 @@
+{% extends 'diagnosis/base.html' %}
+
+{% block title %}New Patient - Emergency RAG Diagnosis{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1 class="card-header">New Patient Intake</h1>
+    <p style="color: var(--text-muted); margin-bottom: 2rem;">
+        Enter comprehensive patient information for emergency diagnosis and triage assessment.
+    </p>
+
+    <form method="post" action="{% url 'patient_input' %}">
+        {% csrf_token %}
+        
+        <div class="card" style="margin-bottom: 2rem;">
+            <h2 style="color: var(--secondary); margin-bottom: 1.5rem;">Patient Demographics</h2>
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label class="form-label">{{ patient_form.patient_id.label }}</label>
+                    {{ patient_form.patient_id }}
+                    {% if patient_form.patient_id.errors %}
+                        <span style="color: var(--danger); font-size: 0.875rem;">{{ patient_form.patient_id.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ patient_form.age.label }}</label>
+                    {{ patient_form.age }}
+                    {% if patient_form.age.errors %}
+                        <span style="color: var(--danger); font-size: 0.875rem;">{{ patient_form.age.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ patient_form.sex.label }}</label>
+                    {{ patient_form.sex }}
+                    {% if patient_form.sex.errors %}
+                        <span style="color: var(--danger); font-size: 0.875rem;">{{ patient_form.sex.errors.0 }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 2rem;">
+            <h2 style="color: var(--secondary); margin-bottom: 1.5rem;">Clinical Information</h2>
+            <div class="form-group">
+                <label class="form-label">{{ patient_form.chief_complaint.label }}</label>
+                {{ patient_form.chief_complaint }}
+                {% if patient_form.chief_complaint.errors %}
+                    <span style="color: var(--danger); font-size: 0.875rem;">{{ patient_form.chief_complaint.errors.0 }}</span>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label">{{ patient_form.symptoms.label }}</label>
+                {{ patient_form.symptoms }}
+                {% if patient_form.symptoms.errors %}
+                    <span style="color: var(--danger); font-size: 0.875rem;">{{ patient_form.symptoms.errors.0 }}</span>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label">{{ patient_form.past_medical_history.label }}</label>
+                {{ patient_form.past_medical_history }}
+            </div>
+            <div class="form-group">
+                <label class="form-label">{{ patient_form.medications.label }}</label>
+                {{ patient_form.medications }}
+            </div>
+            <div class="form-group">
+                <label class="form-label">{{ patient_form.clinical_notes.label }}</label>
+                {{ patient_form.clinical_notes }}
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 2rem;">
+            <h2 style="color: var(--secondary); margin-bottom: 1.5rem;">Vital Signs</h2>
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label class="form-label">Blood Pressure (Systolic)</label>
+                    {{ vitals_form.blood_pressure_systolic }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Blood Pressure (Diastolic)</label>
+                    {{ vitals_form.blood_pressure_diastolic }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ vitals_form.heart_rate.label }}</label>
+                    {{ vitals_form.heart_rate }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ vitals_form.respiratory_rate.label }}</label>
+                    {{ vitals_form.respiratory_rate }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ vitals_form.oxygen_saturation.label }}</label>
+                    {{ vitals_form.oxygen_saturation }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ vitals_form.temperature.label }}</label>
+                    {{ vitals_form.temperature }}
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 2rem;">
+            <h2 style="color: var(--secondary); margin-bottom: 1.5rem;">Laboratory Results</h2>
+            <div class="form-group">
+                <label class="form-label">{{ labs_form.lab_results.label }}</label>
+                {{ labs_form.lab_results }}
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <a href="{% url 'home' %}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save and Generate Diagnosis</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

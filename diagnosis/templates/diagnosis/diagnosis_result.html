@@ -1,0 +1,106 @@
+{% extends 'diagnosis/base.html' %}
+
+{% block title %}Diagnosis Result - {{ patient.patient_id }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1 class="card-header">Diagnosis Result: {{ patient.patient_id }}</h1>
+    
+
+    <div class="grid grid-2" style="margin-top: 2rem;">
+        <div class="card">
+            <h2 style="color: var(--secondary); margin-bottom: 1rem;">Triage Level</h2>
+            <div style="text-align: center;">
+                <span class="badge badge-{{ diagnosis.triage_level|lower }}" style="font-size: 1.5rem; padding: 1rem 2rem;">
+                    {{ diagnosis.triage_level }}
+                </span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 style="color: var(--secondary); margin-bottom: 1rem;">Confidence Score</h2>
+            <div style="text-align: center;">
+                <div style="font-size: 2.5rem; font-weight: 700; color: var(--primary);">
+                    {{ diagnosis.confidence_score|floatformat:2 }}
+                </div>
+                <div style="color: var(--text-muted); margin-top: 0.5rem;">
+                    Model Confidence (0.0 - 1.0)
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2 class="card-header">Differential Diagnoses</h2>
+    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+        Multiple possible diagnoses ranked by likelihood based on retrieved evidence.
+    </p>
+    
+    {% for dx in diagnosis.differential_diagnoses %}
+    <div class="card" style="margin-bottom: 1rem; background: rgba(0, 102, 255, 0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <h3 style="color: var(--secondary); font-size: 1.25rem;">{{ forloop.counter }}. {{ dx.diagnosis }}</h3>
+            <span style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">
+                {{ dx.likelihood }}%
+            </span>
+        </div>
+        <p style="color: var(--text-muted);">{{ dx.reasoning }}</p>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <h2 class="card-header">Medical Reasoning & Explanation</h2>
+    <div style="color: var(--text-light); line-height: 1.8; white-space: pre-wrap;">{{ diagnosis.explanation }}</div>
+</div>
+
+{% if clinical_summary %}
+<div class="card">
+    <h2 class="card-header">Clinical Summary</h2>
+    <div style="background: rgba(0, 0, 0, 0.2); padding: 1.5rem; border-radius: 10px; font-family: monospace; white-space: pre-wrap; color: var(--text-light);">{{ clinical_summary.summary_text }}</div>
+</div>
+{% endif %}
+
+{% if retrieved_cases %}
+<div class="card">
+    <h2 class="card-header">Retrieved Evidence Cases</h2>
+    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+        Similar historical cases used for diagnosis reasoning ({{ retrieved_cases.count }} cases retrieved).
+    </p>
+    
+    {% for case in retrieved_cases %}
+    <div class="card" style="margin-bottom: 1rem; background: rgba(0, 212, 255, 0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <h3 style="color: var(--secondary); font-size: 1.1rem;">Case {{ case.case_id }}</h3>
+            <span class="badge badge-low">{{ case.diagnosis }}</span>
+        </div>
+        <p style="color: var(--text-muted); margin-bottom: 0.5rem;">{{ case.summary_text|truncatewords:50 }}</p>
+        {% if case.outcome %}
+        <p style="color: var(--text-muted); font-size: 0.9rem;"><strong>Outcome:</strong> {{ case.outcome }}</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+    <h2 class="card-header">Patient Information</h2>
+    <div class="grid grid-2">
+        <div>
+            <p><strong>Patient ID:</strong> {{ patient.patient_id }}</p>
+            <p><strong>Age:</strong> {{ patient.age }} years</p>
+            <p><strong>Sex:</strong> {{ patient.get_sex_display }}</p>
+        </div>
+        <div>
+            <p><strong>Chief Complaint:</strong> {{ patient.chief_complaint }}</p>
+            <p><strong>Diagnosis Date:</strong> {{ diagnosis.created_at|date:"M d, Y H:i" }}</p>
+        </div>
+    </div>
+</div>
+
+<div style="display: flex; gap: 1rem; margin-top: 2rem;">
+    <a href="{% url 'patient_detail' patient.patient_id %}" class="btn btn-primary">View Patient Details</a>
+    <a href="{% url 'home' %}" class="btn btn-secondary">Back to Home</a>
+</div>
+{% endblock %}

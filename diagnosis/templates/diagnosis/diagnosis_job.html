@@ -1,0 +1,47 @@
+{% extends 'diagnosis/base.html' %}
+
+{% block title %}Diagnosis Job {{ job.id }}{% endblock %}
+
+{% block content %}
+<section class="card">
+    <p style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.75rem;">Background Processing</p>
+    <h1 class="card-header" style="font-size: 2rem;">Job {{ job.id }}</h1>
+    <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem;">
+        <span class="badge {% if job.status == 'COMPLETED' %}badge-low{% elif job.status == 'FAILED' %}badge-critical{% elif job.status == 'PROCESSING' %}badge-high{% else %}badge-moderate{% endif %}">{{ job.get_status_display }}</span>
+        <span style="color: var(--text-muted); font-size: 0.95rem;">
+            Submitted {{ job.created_at|date:"M d, Y H:i" }} · Updated {{ job.updated_at|date:"M d, Y H:i" }}
+        </span>
+    </div>
+
+    <div style="margin-top: 1.5rem; display: grid; gap: 1rem;">
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;">
+            <strong>Patient:</strong>
+            <code>{{ patient.patient_id }}</code>
+            <span style="color: var(--text-muted);">Age {{ patient.age }}, {{ patient.get_sex_display }}</span>
+        </div>
+        {% if job.reuse_source %}
+        <div style="color: var(--text-muted); font-size: 0.95rem;">
+            This request matched a prior assessment ({{ job.reuse_source.patient.patient_id }}) and re-used the stored differential diagnosis to save latency and tokens.
+        </div>
+        {% endif %}
+        {% if job.error_message %}
+        <div class="disclaimer" style="background: rgba(255,92,92,0.15); border-color: rgba(255,92,92,0.4);">
+            <strong>Failure Reason:</strong> {{ job.error_message }}
+        </div>
+        {% endif %}
+    </div>
+
+    <div style="margin-top: 2rem; display: flex; flex-wrap: wrap; gap: 1rem;">
+        {% if job.diagnosis %}
+            <a href="{% url 'diagnosis_result' job.diagnosis.id %}" class="btn btn-primary">Open Diagnosis</a>
+        {% elif job.status == 'FAILED' %}
+            <a href="{% url 'generate_diagnosis' patient.patient_id %}" class="btn btn-secondary">Retry</a>
+        {% else %}
+            <form method="get" action="">
+                <button type="submit" class="btn btn-secondary">Refresh Status</button>
+            </form>
+        {% endif %}
+        <a href="{% url 'patient_detail' patient.patient_id %}" class="btn btn-secondary">Back to Patient</a>
+    </div>
+</section>
+{% endblock %}

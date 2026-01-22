@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Emergency RAG Diagnosis System{% endblock %}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-1: #04080f;
+            --bg-2: #08161c;
+            --surface: #0e1a23;
+            --surface-alt: #15232f;
+            --border: #243344;
+            --primary: #f5672c;
+            --primary-strong: #c5410f;
+            --primary-contrast: #fff9f2;
+            --magenta: #ff5c5c;
+            --amber: #ffd36b;
+            --mint: #2fbfa6;
+            --violet: #5aa7ff;
+            --text-strong: #f7f3ec;
+            --text-muted: #a8b7c7;
+            --shadow: rgba(4, 6, 10, 0.65);
+        }
+
+        body {
+            font-family: 'IBM Plex Sans', sans-serif;
+            color: var(--text-strong);
+            background: radial-gradient(circle at 15% 20%, rgba(255, 145, 77, 0.15), transparent 45%),
+                        radial-gradient(circle at 80% 0%, rgba(79, 210, 177, 0.18), transparent 40%),
+                        linear-gradient(140deg, var(--bg-1), var(--bg-2));
+            min-height: 100vh;
+            line-height: 1.5;
+            position: relative;
+        }
+
+        .page-backdrop::before,
+        .page-backdrop::after {
+            content: '';
+            position: fixed;
+            width: 420px;
+            height: 420px;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 0;
+            opacity: 0.5;
+        }
+
+        .page-backdrop::before {
+            top: -100px;
+            left: -60px;
+            background: rgba(255, 145, 77, 0.25);
+        }
+
+        .page-backdrop::after {
+            bottom: -120px;
+            right: -80px;
+            background: rgba(90, 167, 255, 0.18);
+        }
+
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: rgba(3, 6, 12, 0.92);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            box-shadow: 0 12px 40px rgba(3, 4, 8, 0.9);
+        }
+
+        .navbar-content {
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            color: var(--text-strong);
+        }
+
+        .logo span {
+            color: var(--primary);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.25rem;
+            align-items: center;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            padding: 0.35rem 0.5rem;
+            transition: color 0.2s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        .nav-cta {
+            background: linear-gradient(118deg, var(--primary-strong), var(--primary));
+            color: var(--primary-contrast);
+            font-weight: 600;
+            padding: 0.6rem 1.4rem;
+            border-radius: 999px;
+            text-decoration: none;
+            box-shadow: 0 10px 30px rgba(245, 103, 44, 0.35);
+        }
+
+        .container {
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: 3rem 2rem 4rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .messages {
+            margin-bottom: 2rem;
+        }
+
+        .message {
+            padding: 1rem 1.25rem;
+            border-radius: 14px;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .message.success {
+            border-color: rgba(79, 210, 177, 0.6);
+        }
+
+        .message.error {
+            border-color: rgba(255, 92, 92, 0.55);
+        }
+
+        .card {
+            background: linear-gradient(165deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)) , var(--surface);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 25px 60px rgba(3, 5, 12, 0.65);
+            transition: transform 0.25s ease, border 0.25s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 145, 77, 0.45);
+        }
+
+        .card-header {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.55rem;
+            letter-spacing: 0.04em;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            border: none;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(120deg, var(--primary-strong), var(--primary));
+            color: var(--primary-contrast);
+            box-shadow: 0 14px 32px rgba(197, 65, 15, 0.45);
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(120deg, rgba(47, 191, 166, 0.15), rgba(15, 43, 52, 0.85));
+            color: #d7fff6;
+            border: 1px solid rgba(47, 191, 166, 0.5);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 0.35rem;
+            display: block;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(10, 16, 25, 0.6);
+            color: var(--text-strong);
+            font-size: 1rem;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(255, 145, 77, 0.25);
+        }
+
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        }
+
+        .grid-4 {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.2rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .badge-low { background: rgba(79, 210, 177, 0.2); color: var(--mint); }
+        .badge-high { background: rgba(255, 211, 107, 0.22); color: var(--amber); }
+        .badge-critical { background: rgba(255, 92, 92, 0.2); color: var(--magenta); }
+        .badge-moderate { background: rgba(90, 167, 255, 0.2); color: var(--violet); }
+
+        .table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 1rem;
+        }
+
+        .table thead th {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 0.75rem;
+        }
+
+        .table tbody td {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            margin-top: 1rem;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .timeline-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-top: 0.35rem;
+            background: var(--primary);
+        }
+
+        .timeline-dot.dot-critical { background: var(--magenta); }
+        .timeline-dot.dot-high { background: var(--amber); }
+        .timeline-dot.dot-moderate { background: var(--violet); }
+        .timeline-dot.dot-low { background: var(--mint); }
+
+        .progress-track {
+            width: 100%;
+            height: 6px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-critical { background: var(--magenta); }
+        .progress-high { background: var(--amber); }
+        .progress-moderate { background: var(--violet); }
+        .progress-low { background: var(--mint); }
+
+        .timeline-content {
+            flex: 1;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 1rem;
+        }
+
+        .timeline-item:last-child .timeline-content {
+            border-bottom: none;
+        }
+
+        .disclaimer {
+            background: rgba(255, 145, 77, 0.12);
+            border: 1px solid rgba(255, 145, 77, 0.45);
+            border-radius: 14px;
+            padding: 1rem 1.5rem;
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .navbar-content {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .nav-links {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+        <div class="page-backdrop"></div>
+        <nav class="navbar">
+            <div class="navbar-content">
+                <div class="logo">Med<span>Emergency</span> RAG</div>
+                {% if user.is_authenticated %}
+                <ul class="nav-links">
+                    <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li><a href="{% url 'patient_input' %}">New Patient</a></li>
+                    <li><a href="{% url 'patient_list' %}">Patients</a></li>
+                    <li>
+                        <span style="color: var(--text-muted); margin: 0 1rem;">|</span>
+                    </li>
+                    <li>
+                        <span style="color: var(--text-muted);">
+                            {{ user.first_name }} {{ user.last_name }}
+                            <span class="badge 
+                                {% if user.profile.role == 'DOCTOR' %}badge-critical
+                                {% elif user.profile.role == 'ADMIN' %}badge-high
+                                {% else %}badge-moderate{% endif %}" 
+                                style="margin-left: 0.5rem; font-size: 0.75rem;">
+                                {{ user.profile.get_role_display }}
+                            </span>
+                        </span>
+                    </li>
+                    <li><a href="{% url 'logout' %}" class="nav-cta">Logout</a></li>
+                </ul>
+                {% else %}
+                <ul class="nav-links">
+                    <li><a href="{% url 'home' %}">Home</a></li>
+                    <li><a href="{% url 'login' %}">Login</a></li>
+                    <li><a href="{% url 'register' %}">Register</a></li>
+                </ul>
+                {% endif %}
+            </div>
+        </nav>
+
+    <div class="container">
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="message {{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

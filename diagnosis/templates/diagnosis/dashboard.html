@@ -1,0 +1,222 @@
+{% extends 'diagnosis/base.html' %}
+
+{% block title %}Dashboard - Emergency RAG Diagnosis System{% endblock %}
+
+{% block content %}
+<section class="card" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.75rem; align-items: flex-start;">
+    <div>
+        <p style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.75rem;">Critical operations</p>
+        <h1 class="card-header" style="font-size: 2.35rem; margin-top: 0.35rem;">Command deck synced, {{ user.first_name|default:'Clinician' }}.</h1>
+        <p style="color: var(--text-muted); max-width: 520px; margin-top: 0.6rem;">
+            Track load, keep triage balanced, and dispatch inference runs without leaving this panel.
+        </p>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem;">
+            <span class="badge {% if user_profile.role == 'DOCTOR' %}badge-critical{% elif user_profile.role == 'ADMIN' %}badge-high{% else %}badge-moderate{% endif %}">
+                {{ user_profile.get_role_display }}
+            </span>
+            <span style="color: var(--text-muted); font-size: 0.9rem;">{{ diagnoses_today }} cases today</span>
+            <span style="color: var(--text-muted); font-size: 0.9rem;">{{ diagnoses_this_week }} this week</span>
+            <span style="color: var(--text-muted); font-size: 0.9rem;">{{ total_patients }} total patients</span>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.4rem;">
+            <a href="{% url 'patient_input' %}" class="btn btn-primary" style="min-width: 170px;">Add patient</a>
+            <a href="{% url 'patient_list' %}" class="btn btn-secondary" style="min-width: 160px;">Patient directory</a>
+            {% if recent_diagnoses %}
+                <a href="{% url 'diagnosis_result' recent_diagnoses.0.id %}" class="btn btn-secondary" style="min-width: 160px;">Latest differential</a>
+            {% else %}
+                <span class="btn btn-secondary" style="min-width: 160px; opacity: 0.6; cursor: not-allowed;">No results yet</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div style="display: grid; gap: 1rem;">
+        <div style="border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 1rem 1.2rem; background: rgba(255,255,255,0.02);">
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Live queue</p>
+            <h3 style="font-size: 2rem; margin-top: 0.25rem;">{{ pending_jobs_total }}</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Jobs running in the background</p>
+        </div>
+        <div style="border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 1rem 1.2rem; background: rgba(255,255,255,0.02);">
+            <p style="color: var(--text-muted); font-size: 0.85rem;">LLM calls today</p>
+            <h3 style="font-size: 2rem; margin-top: 0.25rem; color: var(--primary);">{{ llm_usage_today }}</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Tracked across cascading models</p>
+        </div>
+        <div style="border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 1rem 1.2rem; background: rgba(255,255,255,0.02);">
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Last diagnosis</p>
+            {% if latest_diagnosis %}
+                <h3 style="font-size: 1rem; margin-top: 0.4rem;">{{ latest_diagnosis.patient.patient_id }} · {{ latest_diagnosis.triage_level }}</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">{{ latest_diagnosis.created_at|date:"Y-m-d H:i" }} · Confidence {{ latest_diagnosis.confidence_score|floatformat:1 }}%</p>
+            {% else %}
+                <h3 style="font-size: 1.1rem; margin-top: 0.4rem;">Awaiting first run</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">No differentials generated this session.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<section class="grid grid-3" style="margin-top: 1.5rem;">
+    <article class="card" style="margin-bottom: 0;">
+        <h3 class="card-header" style="margin-bottom: 0.4rem; font-size: 1.15rem;">Case volume</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Total records on file</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem;">
+            <div>
+                <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">Patients</p>
+                <h3 style="font-size: 2.2rem; color: var(--primary);">{{ total_patients }}</h3>
+            </div>
+            <div>
+                <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">New this shift</p>
+                <h4 style="font-size: 1.6rem; color: var(--mint);">{{ recent_patients|length }}</h4>
+            </div>
+        </div>
+    </article>
+
+    <article class="card" style="margin-bottom: 0;">
+        <h3 class="card-header" style="margin-bottom: 0.4rem; font-size: 1.15rem;">Differential output</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">LLM-assisted assessments submitted</p>
+        <div style="display: flex; gap: 1.5rem; margin-top: 0.75rem;">
+            <div>
+                <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">Today</p>
+                <h3 style="font-size: 2.2rem; color: var(--magenta);">{{ diagnoses_today }}</h3>
+            </div>
+            <div>
+                <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">7-day</p>
+                <h3 style="font-size: 2.2rem; color: var(--amber);">{{ diagnoses_this_week }}</h3>
+            </div>
+        </div>
+    </article>
+
+    <article class="card" style="margin-bottom: 0;">
+        <h3 class="card-header" style="margin-bottom: 0.4rem; font-size: 1.15rem;">LLM throughput</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Usage with auto key cascade</p>
+        <div style="display: flex; gap: 1.5rem; margin-top: 0.75rem;">
+            <div>
+                <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">Calls today</p>
+                <h3 style="font-size: 2.2rem; color: var(--primary);">{{ llm_usage_today }}</h3>
+            </div>
+            <div>
+                <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">Jobs running</p>
+                <h3 style="font-size: 2.2rem; color: var(--mint);">{{ pending_jobs_total }}</h3>
+            </div>
+        </div>
+    </article>
+</section>
+
+<section class="grid grid-2" style="margin-top: 1.5rem;">
+    <article class="card" style="margin-bottom: 0;">
+        <h3 class="card-header" style="margin-bottom: 0.4rem; font-size: 1.15rem;">Triage composition</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Live mix of acuity levels</p>
+        <div style="margin-top: 1rem; display: grid; gap: 0.75rem;">
+            {% if triage_stats %}
+                {% for stat in triage_stats %}
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem;">
+                            <span>{{ stat.triage_level }}</span>
+                            <span style="color: var(--text-muted);">{{ stat.count }} cases</span>
+                        </div>
+                        <div class="progress-track" style="margin-top: 0.35rem;">
+                            <div class="progress-fill {% if stat.triage_level == 'CRITICAL' %}progress-critical{% elif stat.triage_level == 'HIGH' %}progress-high{% elif stat.triage_level == 'MODERATE' %}progress-moderate{% else %}progress-low{% endif %}"
+                                data-progress-width="{{ stat.percentage }}"></div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: var(--text-muted);">No triage data yet.</p>
+            {% endif %}
+        </div>
+    </article>
+
+    <article class="card" style="margin-bottom: 0;">
+        <h3 class="card-header" style="margin-bottom: 0.4rem; font-size: 1.15rem;">Action queue</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Jobs keep running after you close the console.</p>
+        <div style="margin-top: 1rem; display: grid; gap: 0.85rem;">
+            {% if pending_jobs %}
+                {% for job in pending_jobs %}
+                <div style="padding: 0.85rem 1rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                    <div>
+                        <strong><code>{{ job.patient.patient_id }}</code></strong>
+                        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.2rem;">
+                            {{ job.get_status_display }} · {{ job.created_at|date:"H:i" }}
+                        </p>
+                    </div>
+                    <a href="{% url 'diagnosis_job_detail' job.id %}" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem;">View</a>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: var(--text-muted);">No queued jobs at the moment.</p>
+            {% endif %}
+        </div>
+    </article>
+</section>
+
+<section class="grid grid-2" style="margin-top: 1.5rem;">
+    <article class="card" style="margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 class="card-header" style="margin: 0;">Recent patients</h2>
+            <a href="{% url 'patient_list' %}" class="btn btn-secondary" style="padding: 0.45rem 1.2rem;">Open list</a>
+        </div>
+        {% if recent_patients %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Patient</th>
+                    <th>Age</th>
+                    <th>Complaint</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for patient in recent_patients %}
+                <tr>
+                    <td><code>{{ patient.patient_id }}</code></td>
+                    <td>{{ patient.age }}</td>
+                    <td>{{ patient.chief_complaint|truncatewords:6 }}</td>
+                    <td>{{ patient.created_at|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: var(--text-muted); margin-top: 1rem;">No patient records yet.</p>
+        {% endif %}
+    </article>
+
+    <article class="card" style="margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 class="card-header" style="margin: 0;">Latest differentials</h2>
+        </div>
+        {% if recent_diagnoses %}
+        <div class="timeline" style="margin-top: 1rem;">
+            {% for diagnosis in recent_diagnoses %}
+            <div class="timeline-item">
+                <div class="timeline-dot {% if diagnosis.triage_level == 'CRITICAL' %}dot-critical{% elif diagnosis.triage_level == 'HIGH' %}dot-high{% elif diagnosis.triage_level == 'MODERATE' %}dot-moderate{% else %}dot-low{% endif %}"></div>
+                <div class="timeline-content">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong>{{ diagnosis.patient.patient_id }}</strong>
+                        <span style="color: var(--text-muted); font-size: 0.85rem;">{{ diagnosis.created_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    <p style="color: var(--text-muted); margin-top: 0.25rem; font-size: 0.9rem;">
+                        {{ diagnosis.triage_level }} · Confidence {{ diagnosis.confidence_score|floatformat:1 }}%
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color: var(--text-muted); margin-top: 1rem;">No diagnoses generated yet today.</p>
+        {% endif %}
+    </article>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-progress-width]').forEach(function (bar) {
+        var width = parseFloat(bar.getAttribute('data-progress-width'));
+        if (!isNaN(width)) {
+            bar.style.width = width + '%';
+        }
+    });
+});
+</script>
+
+{% endblock %}
