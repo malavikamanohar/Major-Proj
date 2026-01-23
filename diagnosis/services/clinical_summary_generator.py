@@ -4,28 +4,56 @@ Converts raw patient data into structured clinical summary
 """
 
 class ClinicalSummaryGenerator:
-    """Generate structured clinical summary from patient data"""
+    """Generate structured clinical summary from visit data"""
     
     @staticmethod
-    def generate(patient, vitals=None, labs=None):
+    def generate(visit, vitals=None, labs=None):
         """
-        Generate a structured clinical summary from patient data
+        Generate a structured clinical summary from visit data
         
         Args:
-            patient: Patient model instance
+            visit: Visit model instance
             vitals: Vitals model instance (optional)
             labs: Labs model instance (optional)
             
         Returns:
             str: Formatted clinical summary
         """
+        patient = visit.patient
         summary_parts = []
         
+        # Visit Context
+        is_follow_up = visit.visit_type == 'FOLLOW_UP'
+        if is_follow_up:
+            summary_parts.append(f"**FOLLOW-UP VISIT #{visit.visit_number}**")
+            summary_parts.append("This is a return visit for ongoing care.\n")
+        else:
+            summary_parts.append(f"**INITIAL VISIT**\n")
+        
         # Chief Complaint
-        summary_parts.append(f"Chief Complaint: {patient.chief_complaint}")
+        summary_parts.append(f"Chief Complaint: {visit.chief_complaint}")
         
         # Key Symptoms
-        summary_parts.append(f"Key Symptoms: {patient.symptoms}")
+        summary_parts.append(f"Key Symptoms: {visit.symptoms}")
+        
+        # Previous Visit History (for follow-ups)
+        if is_follow_up:
+            previous_visits = patient.visits.filter(visit_number__lt=visit.visit_number).order_by('-visit_number')[:2]
+            if previous_visits:
+                summary_parts.append("\n**PREVIOUS VISIT HISTORY:**")
+                for prev_visit in previous_visits:
+                    summary_parts.append(f"\nVisit #{prev_visit.visit_number} ({prev_visit.created_at.strftime('%Y-%m-%d')}):")
+                    summary_parts.append(f"  - Chief Complaint: {prev_visit.chief_complaint}")
+                    
+                    # Include previous diagnosis if available
+                    prev_diagnosis = prev_visit.diagnosis_results.first()
+                    if prev_diagnosis:
+                        top_dx = prev_diagnosis.get_top_diagnosis()
+                        if top_dx:
+                            summary_parts.append(f"  - Previous Diagnosis: {top_dx.get('diagnosis', 'N/A')} ({top_dx.get('likelihood', 0)}% likelihood)")
+                        summary_parts.append(f"  - Triage Level: {prev_diagnosis.triage_level}")
+                
+                summary_parts.append("")  # Empty line for separation
         
         # Abnormal Vitals
         if vitals:

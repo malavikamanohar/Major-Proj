@@ -38,14 +38,14 @@
             <p style="color: var(--text-muted); font-size: 0.85rem;">Jobs running in the background</p>
         </div>
         <div style="border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 1rem 1.2rem; background: rgba(255,255,255,0.02);">
-            <p style="color: var(--text-muted); font-size: 0.85rem;">LLM calls today</p>
-            <h3 style="font-size: 2rem; margin-top: 0.25rem; color: var(--primary);">{{ llm_usage_today }}</h3>
-            <p style="color: var(--text-muted); font-size: 0.85rem;">Tracked across cascading models</p>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Diagnoses done</p>
+            <h3 style="font-size: 2rem; margin-top: 0.25rem; color: var(--primary);">{{ total_diagnoses }}</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Total differential diagnoses generated</p>
         </div>
         <div style="border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 1rem 1.2rem; background: rgba(255,255,255,0.02);">
             <p style="color: var(--text-muted); font-size: 0.85rem;">Last diagnosis</p>
             {% if latest_diagnosis %}
-                <h3 style="font-size: 1rem; margin-top: 0.4rem;">{{ latest_diagnosis.patient.patient_id }} · {{ latest_diagnosis.triage_level }}</h3>
+                <h3 style="font-size: 1rem; margin-top: 0.4rem;">{{ latest_diagnosis.visit.patient.patient_id }} · {{ latest_diagnosis.triage_level }}</h3>
                 <p style="color: var(--text-muted); font-size: 0.85rem;">{{ latest_diagnosis.created_at|date:"Y-m-d H:i" }} · Confidence {{ latest_diagnosis.confidence_score|floatformat:1 }}%</p>
             {% else %}
                 <h3 style="font-size: 1.1rem; margin-top: 0.4rem;">Awaiting first run</h3>
@@ -134,7 +134,7 @@
                 {% for job in pending_jobs %}
                 <div style="padding: 0.85rem 1rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
                     <div>
-                        <strong><code>{{ job.patient.patient_id }}</code></strong>
+                        <strong><code>{{ job.visit.patient.patient_id }}</code></strong>
                         <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.2rem;">
                             {{ job.get_status_display }} · {{ job.created_at|date:"H:i" }}
                         </p>
@@ -170,7 +170,7 @@
                 <tr>
                     <td><code>{{ patient.patient_id }}</code></td>
                     <td>{{ patient.age }}</td>
-                    <td>{{ patient.chief_complaint|truncatewords:6 }}</td>
+                    <td>{{ patient.visits.first.chief_complaint|truncatewords:6|default:"N/A" }}</td>
                     <td>{{ patient.created_at|date:"Y-m-d H:i" }}</td>
                 </tr>
                 {% endfor %}
@@ -192,7 +192,7 @@
                 <div class="timeline-dot {% if diagnosis.triage_level == 'CRITICAL' %}dot-critical{% elif diagnosis.triage_level == 'HIGH' %}dot-high{% elif diagnosis.triage_level == 'MODERATE' %}dot-moderate{% else %}dot-low{% endif %}"></div>
                 <div class="timeline-content">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <strong>{{ diagnosis.patient.patient_id }}</strong>
+                        <strong>{{ diagnosis.visit.patient.patient_id }}</strong>
                         <span style="color: var(--text-muted); font-size: 0.85rem;">{{ diagnosis.created_at|date:"Y-m-d H:i" }}</span>
                     </div>
                     <p style="color: var(--text-muted); margin-top: 0.25rem; font-size: 0.9rem;">

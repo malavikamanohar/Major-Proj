@@ -3,11 +3,13 @@ from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Max
+from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
 from .models import (
     Patient,
+    Visit,
     Vitals,
     Labs,
     ClinicalSummary,
@@ -17,7 +19,7 @@ from .models import (
     LLMUsage,
     UserProfile,
 )
-from .forms import PatientForm, VitalsForm, LabsForm, RegistrationForm, LoginForm
+from .forms import PatientForm, VisitForm, VitalsForm, LabsForm, RegistrationForm, LoginForm
 from .services import (
     ClinicalSummaryGenerator,
     RAGService,
@@ -89,6 +91,7 @@ def dashboard(request):
     
     # Calculate statistics
     total_patients = Patient.objects.count()
+    total_visits = Visit.objects.count()
     today = timezone.now().date()
     week_ago = today - timedelta(days=7)
     
@@ -106,23 +109,27 @@ def dashboard(request):
         for stat in triage_stats:
             stat['percentage'] = 0
     
-    # Recent patients and diagnoses
-    recent_patients = list(Patient.objects.all()[:5])
-    recent_diagnoses = list(DiagnosisResult.objects.select_related('patient').all()[:10])
+    # Recent patients
+    recent_patients = list(Patient.objects.prefetch_related('visits').order_by('-created_at')[:5])
+    
+    # Recent diagnoses
+    recent_diagnoses = list(DiagnosisResult.objects.select_related('visit__patient').order_by('-created_at')[:10])
     latest_diagnosis = recent_diagnoses[0] if recent_diagnoses else None
     
+    # Pending jobs
     pending_jobs_qs = DiagnosisJob.objects.filter(
         status__in=[DiagnosisJob.Status.PENDING, DiagnosisJob.Status.PROCESSING]
-    ).select_related('patient')
+    ).select_related('visit__patient')
     pending_jobs = list(pending_jobs_qs[:5])
     pending_jobs_total = pending_jobs_qs.count()
     
-    # LLM usage today
-    llm_usage_today = LLMUsage.objects.filter(date=today).aggregate(total=Count('id'))['total'] or 0
+    # Total diagnoses count
+    total_diagnoses = DiagnosisResult.objects.count()
     
     context = {
         'user_profile': user_profile,
         'total_patients': total_patients,
+        'total_visits': total_visits,
         'diagnoses_today': diagnoses_today,
         'diagnoses_this_week': diagnoses_this_week,
         'triage_stats': triage_stats,
@@ -130,7 +137,7 @@ def dashboard(request):
         'recent_patients': recent_patients,
         'recent_diagnoses': recent_diagnoses,
         'latest_diagnosis': latest_diagnosis,
-        'llm_usage_today': llm_usage_today,
+        'total_diagnoses': total_diagnoses,
         'pending_jobs': pending_jobs,
         'pending_jobs_total': pending_jobs_total,
     }
@@ -139,30 +146,38 @@ def dashboard(request):
 
 @login_required
 def patient_input(request):
-    """Patient data input form"""
+    """New patient + first visit input form"""
     if request.method == 'POST':
         patient_form = PatientForm(request.POST)
+        visit_form = VisitForm(request.POST)
         vitals_form = VitalsForm(request.POST)
         labs_form = LabsForm(request.POST)
         
-        if patient_form.is_valid() and vitals_form.is_valid() and labs_form.is_valid():
+        if patient_form.is_valid() and visit_form.is_valid() and vitals_form.is_valid() and labs_form.is_valid():
             try:
                 with transaction.atomic():
                     # Save patient
                     patient = patient_form.save()
                     
+                    # Save first visit
+                    visit = visit_form.save(commit=False)
+                    visit.patient = patient
+                    visit.visit_number = 1
+                    visit.visit_type = 'INITIAL'
+                    visit.save()
+                    
                     # Save vitals
                     vitals = vitals_form.save(commit=False)
-                    vitals.patient = patient
+                    vitals.visit = visit
                     vitals.save()
                     
                     # Save labs
                     labs = labs_form.save(commit=False)
-                    labs.patient = patient
+                    labs.visit = visit
                     labs.save()
                     
-                    messages.success(request, f'Patient {patient.patient_id} data saved successfully!')
-                    return redirect('generate_diagnosis', patient_id=patient.patient_id)
+                    messages.success(request, f'Patient {patient.patient_id} and initial visit saved successfully!')
+                    return redirect('generate_diagnosis', patient_id=patient.patient_id, visit_number=1)
                     
             except Exception as e:
                 messages.error(request, f'Error saving patient data: {str(e)}')
@@ -170,41 +185,114 @@ def patient_input(request):
             messages.error(request, 'Please correct the errors below.')
     else:
         patient_form = PatientForm()
+        visit_form = VisitForm()
         vitals_form = VitalsForm()
         labs_form = LabsForm()
     
     context = {
         'patient_form': patient_form,
+        'visit_form': visit_form,
         'vitals_form': vitals_form,
         'labs_form': labs_form,
+        'is_new_patient': True,
     }
     return render(request, 'diagnosis/patient_input.html', context)
 
 
 @login_required
-def generate_diagnosis(request, patient_id):
-    """Generate diagnosis using RAG system"""
+def patient_follow_up(request, patient_id):
+    """Create a follow-up visit for an existing patient"""
+    patient = get_object_or_404(Patient, patient_id=patient_id)
+    
+    # Calculate next visit number
+    next_visit_number = patient.visits.count() + 1
+    
+    if request.method == 'POST':
+        visit_form = VisitForm(request.POST)
+        vitals_form = VitalsForm(request.POST)
+        labs_form = LabsForm(request.POST)
+        
+        if visit_form.is_valid() and vitals_form.is_valid() and labs_form.is_valid():
+            try:
+                with transaction.atomic():
+                    # Save new visit
+                    visit = visit_form.save(commit=False)
+                    visit.patient = patient
+                    visit.visit_number = next_visit_number
+                    visit.visit_type = 'FOLLOW_UP'
+                    visit.save()
+                    
+                    # Save vitals
+                    vitals = vitals_form.save(commit=False)
+                    vitals.visit = visit
+                    vitals.save()
+                    
+                    # Save labs
+                    labs = labs_form.save(commit=False)
+                    labs.visit = visit
+                    labs.save()
+                    
+                    messages.success(request, f'Follow-up visit #{visit.visit_number} recorded successfully!')
+                    return redirect('generate_diagnosis', patient_id=patient.patient_id, visit_number=visit.visit_number)
+                    
+            except Exception as e:
+                messages.error(request, f'Error saving follow-up data: {str(e)}')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        visit_form = VisitForm()
+        vitals_form = VitalsForm()
+        labs_form = LabsForm()
+    
+    context = {
+        'visit_form': visit_form,
+        'vitals_form': vitals_form,
+        'labs_form': labs_form,
+        'patient': patient,
+        'next_visit_number': next_visit_number,
+        'is_follow_up': True,
+    }
+    return render(request, 'diagnosis/patient_input.html', context)
+
+
+@login_required
+def generate_diagnosis(request, patient_id, visit_number):
+    """Generate diagnosis using RAG system for a specific visit"""
     user_profile = request.user.profile
     
     patient = get_object_or_404(Patient, patient_id=patient_id)
-    vitals = getattr(patient, 'vitals', None)
-    labs = getattr(patient, 'labs', None)
-    fingerprint = CaseFingerprintService.generate(patient, vitals, labs)
+    visit = get_object_or_404(Visit, patient=patient, visit_number=visit_number)
+    vitals = getattr(visit, 'vitals', None)
+    labs = getattr(visit, 'labs', None)
+    
+    fingerprint = CaseFingerprintService.generate(visit, vitals, labs)
 
+    # Check for existing identical diagnosis (skip if force_regenerate parameter is set)
+    force_regenerate = request.GET.get('force_regenerate', 'false').lower() == 'true'
+    
+    # If regenerating, delete all previous diagnosis results for this visit
+    if force_regenerate:
+        old_diagnoses = DiagnosisResult.objects.filter(visit=visit)
+        old_count = old_diagnoses.count()
+        if old_count > 0:
+            old_diagnoses.delete()
+            messages.info(request, f'Regenerating - deleted {old_count} previous diagnosis result(s) for this visit.')
+    
     existing_result = DiagnosisResult.objects.filter(case_fingerprint=fingerprint).order_by('-created_at').first()
-    if existing_result:
+    
+    if existing_result and not force_regenerate:
         try:
-            summary_text = ClinicalSummaryGenerator.generate(patient, vitals, labs)
+            summary_text = ClinicalSummaryGenerator.generate(visit, vitals, labs)
             rag_service = RAGService()
             embedding = rag_service.generate_embedding(summary_text)
             embedding_binary = rag_service.numpy_to_binary(embedding)
             ClinicalSummary.objects.update_or_create(
-                patient=patient,
+                visit=visit,
                 defaults={'summary_text': summary_text, 'embedding': embedding_binary}
             )
 
             cloned = DiagnosisResult.objects.create(
-                patient=patient,
+                visit=visit,
                 source_result=existing_result,
                 case_fingerprint=fingerprint,
                 differential_diagnoses=existing_result.differential_diagnoses,
@@ -215,7 +303,7 @@ def generate_diagnosis(request, patient_id):
             )
 
             DiagnosisJob.objects.create(
-                patient=patient,
+                visit=visit,
                 created_by=request.user,
                 status=DiagnosisJob.Status.COMPLETED,
                 case_fingerprint=fingerprint,
@@ -229,8 +317,9 @@ def generate_diagnosis(request, patient_id):
             messages.error(request, f'Error reusing prior diagnosis: {exc}')
             return redirect('patient_detail', patient_id=patient_id)
 
+    # Create new diagnosis job
     job = DiagnosisJob.objects.create(
-        patient=patient,
+        visit=visit,
         created_by=request.user,
         case_fingerprint=fingerprint,
         status=DiagnosisJob.Status.PENDING,
@@ -244,11 +333,23 @@ def generate_diagnosis(request, patient_id):
 
 
 @login_required
+def regenerate_diagnosis(request, patient_id, visit_number):
+    """Regenerate diagnosis for an existing visit, bypassing cache"""
+    patient = get_object_or_404(Patient, patient_id=patient_id)
+    visit = get_object_or_404(Visit, patient=patient, visit_number=visit_number)
+    
+    messages.info(request, 'Regenerating diagnosis - bypassing cache and running fresh RAG analysis...')
+    # Redirect to generate_diagnosis with force_regenerate flag
+    return redirect(f"{reverse('generate_diagnosis', kwargs={'patient_id': patient_id, 'visit_number': visit_number})}?force_regenerate=true")
+
+
+@login_required
 def diagnosis_result(request, diagnosis_id):
     """Display diagnosis results"""
-    diagnosis = get_object_or_404(DiagnosisResult, id=diagnosis_id)
-    patient = diagnosis.patient
-    clinical_summary = getattr(patient, 'clinical_summary', None)
+    diagnosis = get_object_or_404(DiagnosisResult.objects.select_related('visit__patient'), id=diagnosis_id)
+    visit = diagnosis.visit
+    patient = visit.patient
+    clinical_summary = getattr(visit, 'clinical_summary', None)
     
     # Get retrieved cases
     retrieved_cases = KnowledgeCase.objects.filter(
@@ -257,6 +358,7 @@ def diagnosis_result(request, diagnosis_id):
     
     context = {
         'diagnosis': diagnosis,
+        'visit': visit,
         'patient': patient,
         'clinical_summary': clinical_summary,
         'retrieved_cases': retrieved_cases,
@@ -268,7 +370,7 @@ def diagnosis_result(request, diagnosis_id):
 def diagnosis_job_detail(request, job_id):
     """Show background job status and provide link once completed"""
     job = get_object_or_404(
-        DiagnosisJob.objects.select_related('patient', 'diagnosis', 'reuse_source'),
+        DiagnosisJob.objects.select_related('visit__patient', 'diagnosis', 'reuse_source'),
         id=job_id
     )
 
@@ -279,28 +381,41 @@ def diagnosis_job_detail(request, job_id):
 
     context = {
         'job': job,
-        'patient': job.patient,
+        'visit': job.visit,
+        'patient': job.visit.patient,
     }
     return render(request, 'diagnosis/diagnosis_job.html', context)
 
 
 @login_required
 def patient_detail(request, patient_id):
-    """View patient details and history"""
-    patient = get_object_or_404(Patient, patient_id=patient_id)
-    vitals = getattr(patient, 'vitals', None)
-    labs = getattr(patient, 'labs', None)
-    clinical_summary = getattr(patient, 'clinical_summary', None)
-    diagnosis_history = patient.diagnosis_results.all()
-    job_history = patient.diagnosis_jobs.all()
+    """View patient details and all visits"""
+    patient = get_object_or_404(Patient, patient_id=patient_id, is_deleted=False)
+    
+    # Get all visits for this patient
+    visits = patient.visits.all().order_by('visit_number')
+    
+    # Get the latest visit or the one we're currently viewing
+    latest_visit = visits.last() if visits.exists() else None
+    
+    # Get vitals/labs for latest visit
+    vitals = getattr(latest_visit, 'vitals', None) if latest_visit else None
+    labs = getattr(latest_visit, 'labs', None) if latest_visit else None
+    clinical_summary = getattr(latest_visit, 'clinical_summary', None) if latest_visit else None
+    
+    # Aggregate diagnosis history from all visits
+    diagnosis_history = DiagnosisResult.objects.filter(
+        visit__patient=patient
+    ).select_related('visit').order_by('-created_at')
     
     context = {
         'patient': patient,
+        'visits': visits,
+        'latest_visit': latest_visit,
         'vitals': vitals,
         'labs': labs,
         'clinical_summary': clinical_summary,
         'diagnosis_history': diagnosis_history,
-        'job_history': job_history,
     }
     return render(request, 'diagnosis/patient_detail.html', context)
 
@@ -311,21 +426,25 @@ def patient_list(request):
     search_query = request.GET.get('search', '')
     triage_filter = request.GET.get('triage', '')
     
-    patients = Patient.objects.all()
+    # Get all active (non-deleted) patients with visit count annotation
+    patients = Patient.objects.filter(is_deleted=False).annotate(
+        visit_count=Count('visits'),
+        latest_visit_date=Max('visits__created_at')
+    ).order_by('-created_at')
     
     # Apply search
     if search_query:
         patients = patients.filter(
             Q(patient_id__icontains=search_query) |
-            Q(chief_complaint__icontains=search_query) |
-            Q(symptoms__icontains=search_query)
-        )
+            Q(visits__chief_complaint__icontains=search_query) |
+            Q(visits__symptoms__icontains=search_query)
+        ).distinct()
     
     # Apply triage filter
     if triage_filter:
         patient_ids_with_triage = DiagnosisResult.objects.filter(
             triage_level=triage_filter
-        ).values_list('patient_id', flat=True)
+        ).values_list('visit__patient_id', flat=True)
         patients = patients.filter(id__in=patient_ids_with_triage)
     
     context = {
@@ -335,3 +454,140 @@ def patient_list(request):
     }
     return render(request, 'diagnosis/patient_list.html', context)
 
+
+@login_required
+def patient_archived_list(request):
+    """List all archived (soft-deleted) patients"""
+    patients = Patient.objects.filter(is_deleted=True).annotate(
+        visit_count=Count('visits'),
+        latest_visit_date=Max('visits__created_at')
+    ).order_by('-deleted_at')
+    
+    context = {
+        'patients': patients,
+        'is_archived': True,
+    }
+    return render(request, 'diagnosis/patient_list.html', context)
+
+
+@login_required
+def patient_restore(request, patient_id):
+    """Restore archived patient"""
+    patient = get_object_or_404(Patient, patient_id=patient_id, is_deleted=True)
+    
+    if request.method == 'POST':
+        patient_name = patient.get_full_name()
+        patient.is_deleted = False
+        patient.deleted_at = None
+        patient.deleted_by = None
+        patient.save()
+        messages.success(request, f'Patient {patient_name} ({patient_id}) has been restored successfully.')
+        return redirect('patient_detail', patient_id=patient_id)
+    
+    return redirect('patient_archived_list')
+
+
+@login_required
+def patient_delete(request, patient_id):
+    """Archive patient (soft delete) - can be recovered later"""
+    patient = get_object_or_404(Patient, patient_id=patient_id, is_deleted=False)
+    
+    if request.method == 'POST':
+        patient_name = patient.get_full_name()
+        # Soft delete - mark as deleted instead of removing from database
+        patient.is_deleted = True
+        patient.deleted_at = timezone.now()
+        patient.deleted_by = request.user
+        patient.save()
+        messages.success(request, f'Patient {patient_name} ({patient_id}) has been archived. You can restore it from the archived patients list.')
+        return redirect('patient_list')
+    
+    # GET request - show confirmation page
+    context = {
+        'patient': patient,
+        'visit_count': patient.visits.count(),
+    }
+    return render(request, 'diagnosis/patient_delete_confirm.html', context)
+
+
+@login_required
+def patient_edit(request, patient_id):
+    """Edit patient demographics"""
+    patient = get_object_or_404(Patient, patient_id=patient_id)
+    
+    if request.method == 'POST':
+        form = PatientForm(request.POST, instance=patient)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Patient {patient.patient_id} updated successfully!')
+            return redirect('patient_detail', patient_id=patient.patient_id)
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = PatientForm(instance=patient)
+    
+    context = {
+        'form': form,
+        'patient': patient,
+        'is_edit': True,
+    }
+    return render(request, 'diagnosis/patient_edit.html', context)
+
+
+@login_required
+def visit_edit(request, patient_id, visit_number):
+    """Edit visit data including vitals and labs"""
+    patient = get_object_or_404(Patient, patient_id=patient_id)
+    visit = get_object_or_404(Visit, patient=patient, visit_number=visit_number)
+    
+    # Get existing vitals and labs if they exist
+    vitals = getattr(visit, 'vitals', None)
+    labs = getattr(visit, 'labs', None)
+    
+    if request.method == 'POST':
+        visit_form = VisitForm(request.POST, instance=visit)
+        vitals_form = VitalsForm(request.POST, instance=vitals)
+        labs_form = LabsForm(request.POST, instance=labs)
+        
+        if visit_form.is_valid() and vitals_form.is_valid() and labs_form.is_valid():
+            try:
+                with transaction.atomic():
+                    visit_form.save()
+                    
+                    # Update or create vitals
+                    if vitals:
+                        vitals_form.save()
+                    else:
+                        vitals_obj = vitals_form.save(commit=False)
+                        vitals_obj.visit = visit
+                        vitals_obj.save()
+                    
+                    # Update or create labs
+                    if labs:
+                        labs_form.save()
+                    else:
+                        labs_obj = labs_form.save(commit=False)
+                        labs_obj.visit = visit
+                        labs_obj.save()
+                    
+                    messages.success(request, f'Visit #{visit_number} updated successfully!')
+                    return redirect('patient_detail', patient_id=patient.patient_id)
+                    
+            except Exception as e:
+                messages.error(request, f'Error updating visit: {str(e)}')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        visit_form = VisitForm(instance=visit)
+        vitals_form = VitalsForm(instance=vitals)
+        labs_form = LabsForm(instance=labs)
+    
+    context = {
+        'visit_form': visit_form,
+        'vitals_form': vitals_form,
+        'labs_form': labs_form,
+        'patient': patient,
+        'visit': visit,
+        'is_edit': True,
+    }
+    return render(request, 'diagnosis/visit_edit.html', context)

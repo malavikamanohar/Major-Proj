@@ -181,6 +181,13 @@ CRITICAL SAFETY REQUIREMENTS:
 - Reference retrieved cases explicitly in your reasoning
 - This is decision support only - NOT a replacement for clinical judgment
 
+IMPORTANT: If this is a FOLLOW-UP VISIT, carefully consider:
+- How symptoms have changed since previous visits
+- Whether previous diagnoses are still relevant
+- If the patient is responding to prior treatment
+- Whether new differential diagnoses should be considered
+- Continuity of care and disease progression
+
 PATIENT CLINICAL SUMMARY:
 {clinical_summary}
 
@@ -193,22 +200,23 @@ REQUIRED OUTPUT FORMAT (JSON):
     {{
       "diagnosis": "condition name",
       "likelihood": percentage (0-100),
-      "reasoning": "brief explanation referencing similar cases"
+      "reasoning": "brief explanation referencing similar cases and previous visit context if applicable"
     }}
   ],
   "triage_level": "LOW | MEDIUM | HIGH | CRITICAL",
-  "explanation": "Comprehensive medical reasoning explaining the differential diagnoses, triage level, and explicit references to the retrieved cases that support your conclusions",
+  "explanation": "Comprehensive medical reasoning explaining the differential diagnoses, triage level, and explicit references to the retrieved cases that support your conclusions. For follow-up visits, also explain how the assessment relates to previous visits.",
   "confidence_score": decimal (0.0-1.0),
   "disclaimer": "This is clinical decision support only. Final diagnosis and treatment decisions must be made by qualified healthcare professionals based on complete clinical assessment."
 }}
 
 INSTRUCTIONS:
-1. Analyze the patient summary and retrieved cases
+1. Analyze the patient summary (including previous visit history if this is a follow-up)
 2. Generate 3-5 differential diagnoses ranked by likelihood
-3. Assign appropriate triage level based on severity and urgency
-4. Provide detailed explanation referencing the retrieved cases
-5. Include confidence score reflecting certainty of the assessment
-6. Output ONLY valid JSON matching the format above
+3. For follow-ups: Consider progression, treatment response, and changes since last visit
+4. Assign appropriate triage level based on severity and urgency
+5. Provide detailed explanation referencing the retrieved cases
+6. Include confidence score reflecting certainty of the assessment
+7. Output ONLY valid JSON matching the format above
 """
         
         # Format retrieved cases

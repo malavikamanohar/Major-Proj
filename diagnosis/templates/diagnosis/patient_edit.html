@@ -1,0 +1,115 @@
+{% extends 'diagnosis/base.html' %}
+
+{% block title %}Edit Patient - {{ patient.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1 class="card-header">Edit Patient Demographics</h1>
+    
+    <div style="background: rgba(90, 167, 255, 0.15); border: 1px solid var(--violet); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem;">
+        <strong>Patient:</strong> <a href="{% url 'patient_detail' patient.patient_id %}" style="color: var(--violet);">{{ patient.patient_id }} - {{ patient.get_full_name }}</a><br>
+        <strong>Age:</strong> {{ patient.age }}yr {{ patient.get_sex_display }}
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="card" style="margin-bottom: 2rem;">
+            <h2 style="color: var(--secondary); margin-bottom: 1.5rem;">Patient Demographics</h2>
+            
+            <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem;">Identification</h3>
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label class="form-label">{{ form.patient_id.label }}</label>
+                    {{ form.patient_id }}
+                    {% if form.patient_id.errors %}
+                        <span style="color: var(--danger); font-size: 0.875rem;">{{ form.patient_id.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.first_name.label }}</label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                        <span style="color: var(--danger); font-size: 0.875rem;">{{ form.first_name.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.last_name.label }}</label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                        <span style="color: var(--danger); font-size: 0.875rem;">{{ form.last_name.errors.0 }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem; margin-top: 1.5rem;">Basic Information</h3>
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label class="form-label">{{ form.date_of_birth.label }}</label>
+                    {{ form.date_of_birth }}
+                    {% if form.date_of_birth.errors %}
+                        <span style="color: var(--danger); font-size: 0.875rem;">{{ form.date_of_birth.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.age.label }}</label>
+                    {{ form.age }}
+                    {% if form.age.errors %}
+                        <span style="color: var(--danger); font-size: 0.875rem;">{{ form.age.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.sex.label }}</label>
+                    {{ form.sex }}
+                    {% if form.sex.errors %}
+                        <span style="color: var(--danger); font-size: 0.875rem;">{{ form.sex.errors.0 }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem; margin-top: 1.5rem;">Contact Information</h3>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">{{ form.phone_number.label }}</label>
+                    {{ form.phone_number }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.email.label }}</label>
+                    {{ form.email }}
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">{{ form.address.label }}</label>
+                {{ form.address }}
+            </div>
+            
+            <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem; margin-top: 1.5rem;">Emergency Contact</h3>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">{{ form.emergency_contact_name.label }}</label>
+                    {{ form.emergency_contact_name }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.emergency_contact_phone.label }}</label>
+                    {{ form.emergency_contact_phone }}
+                </div>
+            </div>
+            
+            <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem; margin-top: 1.5rem;">Medical History</h3>
+            <div class="form-group">
+                <label class="form-label">{{ form.past_medical_history.label }}</label>
+                {{ form.past_medical_history }}
+            </div>
+            <div class="form-group">
+                <label class="form-label">{{ form.medications.label }}</label>
+                {{ form.medications }}
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <a href="{% url 'patient_detail' patient.patient_id %}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

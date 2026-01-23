@@ -1,0 +1,84 @@
+{% extends 'diagnosis/base.html' %}
+
+{% block title %}Edit Visit - {{ patient.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1 class="card-header">Edit Visit #{{ visit.visit_number }}</h1>
+    
+    <div style="background: rgba(90, 167, 255, 0.15); border: 1px solid var(--violet); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem;">
+        <strong>Patient:</strong> <a href="{% url 'patient_detail' patient.patient_id %}" style="color: var(--violet);">{{ patient.patient_id }} - {{ patient.get_full_name }}</a><br>
+        <strong>Visit:</strong> #{{ visit.visit_number }} ({{ visit.get_visit_type_display }})<br>
+        <strong>Date:</strong> {{ visit.created_at|date:"M d, Y H:i" }}
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="card" style="margin-bottom: 2rem;">
+            <h2 style="color: var(--secondary); margin-bottom: 1.5rem;">Visit Details</h2>
+            <div class="form-group">
+                <label class="form-label">{{ visit_form.chief_complaint.label }}</label>
+                {{ visit_form.chief_complaint }}
+                {% if visit_form.chief_complaint.errors %}
+                    <span style="color: var(--danger); font-size: 0.875rem;">{{ visit_form.chief_complaint.errors.0 }}</span>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label">{{ visit_form.symptoms.label }}</label>
+                {{ visit_form.symptoms }}
+                {% if visit_form.symptoms.errors %}
+                    <span style="color: var(--danger); font-size: 0.875rem;">{{ visit_form.symptoms.errors.0 }}</span>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label">{{ visit_form.clinical_notes.label }}</label>
+                {{ visit_form.clinical_notes }}
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 2rem;">
+            <h2 style="color: var(--secondary); margin-bottom: 1.5rem;">Vital Signs</h2>
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label class="form-label">Blood Pressure (Systolic)</label>
+                    {{ vitals_form.blood_pressure_systolic }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Blood Pressure (Diastolic)</label>
+                    {{ vitals_form.blood_pressure_diastolic }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ vitals_form.heart_rate.label }}</label>
+                    {{ vitals_form.heart_rate }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ vitals_form.respiratory_rate.label }}</label>
+                    {{ vitals_form.respiratory_rate }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ vitals_form.oxygen_saturation.label }}</label>
+                    {{ vitals_form.oxygen_saturation }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ vitals_form.temperature.label }}</label>
+                    {{ vitals_form.temperature }}
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 2rem;">
+            <h2 style="color: var(--secondary); margin-bottom: 1.5rem;">Laboratory Results</h2>
+            <div class="form-group">
+                <label class="form-label">{{ labs_form.lab_results.label }}</label>
+                {{ labs_form.lab_results }}
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <a href="{% url 'patient_detail' patient.patient_id %}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

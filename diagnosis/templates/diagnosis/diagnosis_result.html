@@ -93,7 +93,8 @@
             <p><strong>Sex:</strong> {{ patient.get_sex_display }}</p>
         </div>
         <div>
-            <p><strong>Chief Complaint:</strong> {{ patient.chief_complaint }}</p>
+            <p><strong>Chief Complaint:</strong> {{ visit.chief_complaint }}</p>
+            <p><strong>Visit Number:</strong> Visit #{{ visit.visit_number }}</p>
             <p><strong>Diagnosis Date:</strong> {{ diagnosis.created_at|date:"M d, Y H:i" }}</p>
         </div>
     </div>
@@ -101,6 +102,7 @@
 
 <div style="display: flex; gap: 1rem; margin-top: 2rem;">
     <a href="{% url 'patient_detail' patient.patient_id %}" class="btn btn-primary">View Patient Details</a>
+    <a href="{% url 'regenerate_diagnosis' patient.patient_id visit.visit_number %}" class="btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">Regenerate Diagnosis</a>
     <a href="{% url 'home' %}" class="btn btn-secondary">Back to Home</a>
 </div>
 {% endblock %}

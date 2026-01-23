@@ -1,141 +1,223 @@
 {% extends 'diagnosis/base.html' %}
 
-{% block title %}Patient Details - {{ patient.patient_id }}{% endblock %}
+{% block title %}Patient Details - {{ patient.get_full_name }}{% endblock %}
 
 {% block content %}
-<div class="card">
-    <h1 class="card-header">Patient: {{ patient.patient_id }}</h1>
+<section class="card">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+        <div>
+            <p style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.75rem;">Patient Record</p>
+            <h1 class="card-header" style="margin-top: 0.35rem; font-size: 2.2rem;">{{ patient.get_full_name }}</h1>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.5rem;">ID: <code>{{ patient.patient_id }}</code></p>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+            <a href="{% url 'patient_edit' patient.patient_id %}" class="btn btn-secondary" style="min-width: 120px;">Edit Patient</a>
+            {% if latest_visit %}
+            <a href="{% url 'generate_diagnosis' patient.patient_id latest_visit.visit_number %}" class="btn btn-primary" style="min-width: 160px;">Generate Diagnosis</a>
+            {% endif %}
+            <a href="{% url 'patient_follow_up' patient.patient_id %}" class="btn btn-secondary" style="min-width: 150px;">Record Follow-up</a>
+            <a href="{% url 'patient_delete' patient.patient_id %}" class="btn" style="background: #ff9800; color: white; border: none; min-width: 100px;">Archive</a>
+        </div>
+    </div>
     
-    <div class="grid grid-3" style="margin-bottom: 2rem;">
-        <div>
-            <p><strong>Age:</strong> {{ patient.age }} years</p>
-            <p><strong>Sex:</strong> {{ patient.get_sex_display }}</p>
+    <div class="grid grid-4" style="gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1rem;">
+            <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em;">Age</p>
+            <p style="font-size: 1.8rem; font-weight: 600; margin-top: 0.25rem;">{{ patient.age }}</p>
         </div>
-        <div>
-            <p><strong>Created:</strong> {{ patient.created_at|date:"M d, Y H:i" }}</p>
-            <p><strong>Last Updated:</strong> {{ patient.updated_at|date:"M d, Y H:i" }}</p>
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1rem;">
+            <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em;">Sex</p>
+            <p style="font-size: 1.8rem; font-weight: 600; margin-top: 0.25rem;">{{ patient.get_sex_display }}</p>
         </div>
-        <div>
-            {% if diagnosis_history %}
-            <a href="{% url 'generate_diagnosis' patient.patient_id %}" class="btn btn-primary">Generate New Diagnosis</a>
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1rem;">
+            <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em;">Total Visits</p>
+            <p style="font-size: 1.8rem; font-weight: 600; margin-top: 0.25rem; color: var(--primary);">{{ visits|length }}</p>
+        </div>
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1rem;">
+            <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em;">Diagnoses</p>
+            <p style="font-size: 1.8rem; font-weight: 600; margin-top: 0.25rem; color: var(--mint);">{{ diagnosis_history|length }}</p>
+        </div>
+    </div>
+    
+    <div class="grid grid-2" style="gap: 1rem; margin-bottom: 1.5rem;">
+        <div class="card" style="margin: 0;">
+            <h3 style="color: var(--secondary); margin-bottom: 1rem; font-size: 1rem;">Contact Information</h3>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                {% if patient.phone_number %}
+                <p><strong>Phone:</strong> {{ patient.phone_number }}</p>
+                {% endif %}
+                {% if patient.email %}
+                <p><strong>Email:</strong> {{ patient.email }}</p>
+                {% endif %}
+                {% if patient.address %}
+                <p><strong>Address:</strong> {{ patient.address }}</p>
+                {% endif %}
+                {% if not patient.phone_number and not patient.email and not patient.address %}
+                <p style="color: var(--text-muted);">No contact information on file</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card" style="margin: 0;">
+            <h3 style="color: var(--secondary); margin-bottom: 1rem; font-size: 1rem;">Emergency Contact</h3>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                {% if patient.emergency_contact_name %}
+                <p><strong>Name:</strong> {{ patient.emergency_contact_name }}</p>
+                {% endif %}
+                {% if patient.emergency_contact_phone %}
+                <p><strong>Phone:</strong> {{ patient.emergency_contact_phone }}</p>
+                {% endif %}
+                {% if not patient.emergency_contact_name and not patient.emergency_contact_phone %}
+                <p style="color: var(--text-muted);">No emergency contact on file</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+{% if visits|length > 1 %}
+<section class="card">
+    <h2 class="card-header" style="font-size: 1.35rem;">Complete Visit History</h2>
+    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">All visits for this patient in chronological order</p>
+    <div class="timeline">
+        {% for visit in visits %}
+        <div class="timeline-item">
+            <div class="timeline-dot {% if visit.id == latest_visit.id %}dot-high{% else %}dot-moderate{% endif %}"></div>
+            <div class="timeline-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <strong style="font-size: 1.05rem;">
+                        Visit #{{ visit.visit_number }}{% if visit.visit_type == 'INITIAL' %} (Initial){% else %} (Follow-up){% endif %}
+                        {% if visit.id == latest_visit.id %}<span class="badge badge-high" style="margin-left: 0.5rem;">Latest</span>{% endif %}
+                    </strong>
+                    <span style="color: var(--text-muted); font-size: 0.85rem;">{{ visit.created_at|date:"M d, Y H:i" }}</span>
+                </div>
+                <div style="background: rgba(0,0,0,0.2); padding: 0.75rem 1rem; border-radius: 8px; margin-top: 0.5rem;">
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.35rem;"><strong>Chief Complaint:</strong></p>
+                    <p style="font-size: 0.95rem;">{{ visit.chief_complaint }}</p>
+                </div>
+                <div style="display: flex; gap: 0.75rem; margin-top: 0.75rem;">
+                    <a href="{% url 'visit_edit' patient.patient_id visit.visit_number %}" class="btn btn-secondary" style="padding: 0.45rem 1rem; font-size: 0.85rem;">Edit Visit</a>
+                    {% if visit.diagnosis_results.exists %}
+                    <a href="{% url 'diagnosis_result' visit.diagnosis_results.first.id %}" class="btn btn-secondary" style="padding: 0.45rem 1rem; font-size: 0.85rem;">View Diagnosis</a>
+                    <a href="{% url 'regenerate_diagnosis' patient.patient_id visit.visit_number %}" class="btn" style="padding: 0.45rem 1rem; font-size: 0.85rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">Regenerate</a>
+                    {% else %}
+                    <a href="{% url 'generate_diagnosis' patient.patient_id visit.visit_number %}" class="btn btn-secondary" style="padding: 0.45rem 1rem; font-size: 0.85rem;">Generate Diagnosis</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<section class="grid grid-2" style="margin-top: 1.5rem;">
+    <article class="card" style="margin-bottom: 0;">
+        <h3 class="card-header" style="font-size: 1.15rem;">Latest Visit Details</h3>
+        {% if latest_visit %}
+        <div style="margin-top: 1rem;">
+            <div style="margin-bottom: 1.25rem;">
+                <p style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em;">Chief Complaint</p>
+                <p style="margin-top: 0.35rem;">{{ latest_visit.chief_complaint }}</p>
+            </div>
+            <div style="margin-bottom: 1.25rem;">
+                <p style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em;">Symptoms</p>
+                <p style="margin-top: 0.35rem;">{{ latest_visit.symptoms }}</p>
+            </div>
+            {% if latest_visit.clinical_notes %}
+            <div>
+                <p style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em;">Clinical Notes</p>
+                <p style="margin-top: 0.35rem;">{{ latest_visit.clinical_notes }}</p>
+            </div>
             {% endif %}
         </div>
-    </div>
-</div>
+        {% else %}
+        <p style="color: var(--text-muted);">No visits recorded yet.</p>
+        {% endif %}
+    </article>
 
-<div class="card">
-    <h2 class="card-header">Clinical Information</h2>
-    <div class="grid grid-2">
-        <div>
-            <h3 style="color: var(--secondary); margin-bottom: 0.5rem;">Chief Complaint</h3>
-            <p style="color: var(--text-muted);">{{ patient.chief_complaint }}</p>
+    <article class="card" style="margin-bottom: 0;">
+        <h3 class="card-header" style="font-size: 1.15rem;">Medical Background</h3>
+        <div style="margin-top: 1rem;">
+            {% if patient.past_medical_history %}
+            <div style="margin-bottom: 1.25rem;">
+                <p style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em;">Past Medical History</p>
+                <p style="margin-top: 0.35rem;">{{ patient.past_medical_history }}</p>
+            </div>
+            {% endif %}
+            {% if patient.medications %}
+            <div>
+                <p style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em;">Current Medications</p>
+                <p style="margin-top: 0.35rem;">{{ patient.medications }}</p>
+            </div>
+            {% endif %}
+            {% if not patient.past_medical_history and not patient.medications %}
+            <p style="color: var(--text-muted);">No medical history recorded</p>
+            {% endif %}
         </div>
-        <div>
-            <h3 style="color: var(--secondary); margin-bottom: 0.5rem;">Symptoms</h3>
-            <p style="color: var(--text-muted);">{{ patient.symptoms }}</p>
-        </div>
-    </div>
-    
-    {% if patient.past_medical_history %}
-    <div style="margin-top: 1.5rem;">
-        <h3 style="color: var(--secondary); margin-bottom: 0.5rem;">Past Medical History</h3>
-        <p style="color: var(--text-muted);">{{ patient.past_medical_history }}</p>
-    </div>
-    {% endif %}
-    
-    {% if patient.medications %}
-    <div style="margin-top: 1.5rem;">
-        <h3 style="color: var(--secondary); margin-bottom: 0.5rem;">Current Medications</h3>
-        <p style="color: var(--text-muted);">{{ patient.medications }}</p>
-    </div>
-    {% endif %}
-    
-    {% if patient.clinical_notes %}
-    <div style="margin-top: 1.5rem;">
-        <h3 style="color: var(--secondary); margin-bottom: 0.5rem;">Clinical Notes</h3>
-        <p style="color: var(--text-muted);">{{ patient.clinical_notes }}</p>
-    </div>
-    {% endif %}
-</div>
+    </article>
+</section>
 
 {% if vitals %}
-<div class="card">
-    <h2 class="card-header">Vital Signs</h2>
-    <div class="grid grid-3">
+<section class="card" style="margin-top: 1.5rem;">
+    <h2 class="card-header" style="font-size: 1.35rem;">Vital Signs</h2>
+    <div style="display: flex; align-items: center; gap: 2rem; margin-top: 1rem; flex-wrap: wrap;">
         {% if vitals.blood_pressure_systolic and vitals.blood_pressure_diastolic %}
-        <div>
-            <h3 style="color: var(--secondary); margin-bottom: 0.5rem;">Blood Pressure</h3>
-            <p style="font-size: 1.5rem; font-weight: 700;">{{ vitals.blood_pressure_systolic }}/{{ vitals.blood_pressure_diastolic }}</p>
-            <p style="color: var(--text-muted); font-size: 0.875rem;">mmHg</p>
+        <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+            <span style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em;">BP:</span>
+            <strong style="font-size: 1.4rem;">{{ vitals.blood_pressure_systolic }}/{{ vitals.blood_pressure_diastolic }}</strong>
+            <span style="color: var(--text-muted); font-size: 0.85rem;">mmHg</span>
         </div>
         {% endif %}
-        
         {% if vitals.heart_rate %}
-        <div>
-            <h3 style="color: var(--secondary); margin-bottom: 0.5rem;">Heart Rate</h3>
-            <p style="font-size: 1.5rem; font-weight: 700;">{{ vitals.heart_rate }}</p>
-            <p style="color: var(--text-muted); font-size: 0.875rem;">bpm</p>
+        <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+            <span style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em;">HR:</span>
+            <strong style="font-size: 1.4rem;">{{ vitals.heart_rate }}</strong>
+            <span style="color: var(--text-muted); font-size: 0.85rem;">bpm</span>
         </div>
         {% endif %}
-        
         {% if vitals.respiratory_rate %}
-        <div>
-            <h3 style="color: var(--secondary); margin-bottom: 0.5rem;">Respiratory Rate</h3>
-            <p style="font-size: 1.5rem; font-weight: 700;">{{ vitals.respiratory_rate }}</p>
-            <p style="color: var(--text-muted); font-size: 0.875rem;">breaths/min</p>
+        <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+            <span style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em;">RR:</span>
+            <strong style="font-size: 1.4rem;">{{ vitals.respiratory_rate }}</strong>
+            <span style="color: var(--text-muted); font-size: 0.85rem;">/min</span>
         </div>
         {% endif %}
-        
         {% if vitals.oxygen_saturation %}
-        <div>
-            <h3 style="color: var(--secondary); margin-bottom: 0.5rem;">Oxygen Saturation</h3>
-            <p style="font-size: 1.5rem; font-weight: 700;">{{ vitals.oxygen_saturation }}%</p>
-            <p style="color: var(--text-muted); font-size: 0.875rem;">SpO2</p>
+        <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+            <span style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em;">SpO2:</span>
+            <strong style="font-size: 1.4rem;">{{ vitals.oxygen_saturation }}%</strong>
         </div>
         {% endif %}
-        
         {% if vitals.temperature %}
-        <div>
-            <h3 style="color: var(--secondary); margin-bottom: 0.5rem;">Temperature</h3>
-            <p style="font-size: 1.5rem; font-weight: 700;">{{ vitals.temperature }}</p>
-            <p style="color: var(--text-muted); font-size: 0.875rem;">°F</p>
+        <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+            <span style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em;">Temp:</span>
+            <strong style="font-size: 1.4rem;">{{ vitals.temperature }}</strong>
+            <span style="color: var(--text-muted); font-size: 0.85rem;">°F</span>
         </div>
         {% endif %}
     </div>
-    <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 1rem;">
-        Recorded: {{ vitals.recorded_at|date:"M d, Y H:i" }}
-    </p>
-</div>
+    <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem;">Recorded: {{ vitals.recorded_at|date:"M d, Y H:i" }}</p>
+</section>
 {% endif %}
 
 {% if labs %}
-<div class="card">
-    <h2 class="card-header">Laboratory Results</h2>
-    <div style="background: rgba(0, 0, 0, 0.2); padding: 1.5rem; border-radius: 10px; font-family: monospace; white-space: pre-wrap;">{{ labs.lab_results }}</div>
-    <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 1rem;">
-        Recorded: {{ labs.recorded_at|date:"M d, Y H:i" }}
-    </p>
-</div>
-{% endif %}
-
-{% if clinical_summary %}
-<div class="card">
-    <h2 class="card-header">Clinical Summary</h2>
-    <div style="background: rgba(0, 0, 0, 0.2); padding: 1.5rem; border-radius: 10px; font-family: monospace; white-space: pre-wrap;">{{ clinical_summary.summary_text }}</div>
-    <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 1rem;">
-        Generated: {{ clinical_summary.created_at|date:"M d, Y H:i" }}
-    </p>
-</div>
+<section class="card" style="margin-top: 1.5rem;">
+    <h2 class="card-header" style="font-size: 1.35rem;">Laboratory Results</h2>
+    <div style="background: rgba(0, 0, 0, 0.3); padding: 1.25rem; border-radius: 12px; font-family: monospace; white-space: pre-wrap; margin-top: 1rem;">{{ labs.lab_results }}</div>
+    <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem;">Recorded: {{ labs.recorded_at|date:"M d, Y H:i" }}</p>
+</section>
 {% endif %}
 
 {% if diagnosis_history %}
-<div class="card">
-    <h2 class="card-header">Diagnosis History</h2>
-    <table class="table">
+<section class="card" style="margin-top: 1.5rem;">
+    <h2 class="card-header" style="font-size: 1.35rem;">Diagnosis History</h2>
+    <p style="color: var(--text-muted); margin-bottom: 1rem;">All diagnoses across all visits</p>
+    <table class="table" style="margin-top: 1rem;">
         <thead>
             <tr>
+                <th>Visit</th>
                 <th>Date</th>
-                <th>Triage Level</th>
+                <th>Triage</th>
                 <th>Top Diagnosis</th>
                 <th>Confidence</th>
                 <th>Actions</th>
@@ -144,81 +226,35 @@
         <tbody>
             {% for dx in diagnosis_history %}
             <tr>
+                <td>Visit #{{ dx.visit.visit_number }}</td>
                 <td>{{ dx.created_at|date:"M d, Y H:i" }}</td>
-                <td><span class="badge badge-{{ dx.triage_level|lower }}">{{ dx.triage_level }}</span></td>
                 <td>
-                    {% if dx.differential_diagnoses %}
-                        {{ dx.differential_diagnoses.0.diagnosis|default:"N/A" }}
+                    <span class="badge 
+                        {% if dx.triage_level == 'CRITICAL' %}badge-critical
+                        {% elif dx.triage_level == 'HIGH' %}badge-high
+                        {% elif dx.triage_level == 'MODERATE' %}badge-moderate
+                        {% else %}badge-low{% endif %}">
+                        {{ dx.triage_level }}
+                    </span>
+                </td>
+                <td>
+                    {% if dx.differential_diagnoses %}\n                        {{ dx.differential_diagnoses.0.diagnosis|default:"N/A" }}
                     {% else %}
                         N/A
                     {% endif %}
                 </td>
-                <td>{{ dx.confidence_score|floatformat:2 }}</td>
+                <td>{{ dx.confidence_score|floatformat:1 }}%</td>
                 <td>
-                    <a href="{% url 'diagnosis_result' dx.id %}" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">View Details</a>
+                    <a href="{% url 'diagnosis_result' dx.id %}" class="btn btn-secondary" style="padding: 0.45rem 1rem; font-size: 0.85rem;">View</a>
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-</div>
-{% else %}
-<div class="card" style="text-align: center;">
-    <h2 class="card-header">No Diagnosis Yet</h2>
-    <p style="color: var(--text-muted); margin-bottom: 2rem;">
-        Generate a diagnosis for this patient using the RAG system.
-    </p>
-    <a href="{% url 'generate_diagnosis' patient.patient_id %}" class="btn btn-primary">Generate Diagnosis</a>
-</div>
-{% endif %}
-
-{% if job_history %}
-<div class="card">
-    <h2 class="card-header">Diagnosis Jobs</h2>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Created</th>
-                <th>Status</th>
-                <th>Linked Diagnosis</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for job in job_history %}
-            <tr>
-                <td>{{ job.created_at|date:"M d, Y H:i" }}</td>
-                <td>
-                    <span class="badge
-                        {% if job.status == 'COMPLETED' %}badge-low
-                        {% elif job.status == 'FAILED' %}badge-critical
-                        {% elif job.status == 'PROCESSING' %}badge-high
-                        {% else %}badge-moderate{% endif %}">
-                        {{ job.get_status_display }}
-                    </span>
-                </td>
-                <td>
-                    {% if job.diagnosis %}
-                        {{ job.diagnosis.created_at|date:"M d, Y H:i" }}
-                    {% else %}
-                        --
-                    {% endif %}
-                </td>
-                <td>
-                    {% if job.diagnosis %}
-                        <a href="{% url 'diagnosis_result' job.diagnosis.id %}" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem;">View Result</a>
-                    {% else %}
-                        <a href="{% url 'diagnosis_job_detail' job.id %}" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem;">View Status</a>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+</section>
 {% endif %}
 
 <div style="margin-top: 2rem;">
-    <a href="{% url 'patient_list' %}" class="btn btn-secondary">Back to Patient List</a>
+    <a href="{% url 'patient_list' %}" class="btn btn-secondary">← Back to Patient List</a>
 </div>
 {% endblock %}

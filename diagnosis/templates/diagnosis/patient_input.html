@@ -1,25 +1,65 @@
 {% extends 'diagnosis/base.html' %}
 
-{% block title %}New Patient - Emergency RAG Diagnosis{% endblock %}
+{% block title %}{% if is_follow_up %}Follow-up Visit{% else %}New Patient{% endif %} - Emergency RAG Diagnosis{% endblock %}
 
 {% block content %}
 <div class="card">
-    <h1 class="card-header">New Patient Intake</h1>
+    <h1 class="card-header">{% if is_follow_up %}Follow-up Visit{% else %}New Patient Intake{% endif %}</h1>
+    
+    {% if is_follow_up %}
+    <div style="background: rgba(90, 167, 255, 0.15); border: 1px solid var(--violet); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem;">
+        <strong>Patient:</strong> <a href="{% url 'patient_detail' patient.patient_id %}" style="color: var(--violet);">{{ patient.patient_id }}</a><br>
+        <strong>Demographics:</strong> {{ patient.age }}yr {{ patient.get_sex_display }}<br>
+        <strong>New Visit:</strong> #{{ next_visit_number }}
+        <p style="color: var(--text-muted); margin-top: 0.5rem; font-size: 0.9rem;">
+            Demographics are already on file. Enter current visit details below.
+        </p>
+    </div>
+    {% else %}
     <p style="color: var(--text-muted); margin-bottom: 2rem;">
-        Enter comprehensive patient information for emergency diagnosis and triage assessment.
+        Enter patient demographics and initial visit information for emergency diagnosis and triage assessment.
     </p>
+    {% endif %}
 
-    <form method="post" action="{% url 'patient_input' %}">
+    <form method="post">
         {% csrf_token %}
         
+        {% if not is_follow_up %}
         <div class="card" style="margin-bottom: 2rem;">
             <h2 style="color: var(--secondary); margin-bottom: 1.5rem;">Patient Demographics</h2>
+            
+            <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem;">Identification</h3>
             <div class="grid grid-3">
                 <div class="form-group">
                     <label class="form-label">{{ patient_form.patient_id.label }}</label>
                     {{ patient_form.patient_id }}
                     {% if patient_form.patient_id.errors %}
                         <span style="color: var(--danger); font-size: 0.875rem;">{{ patient_form.patient_id.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ patient_form.first_name.label }}</label>
+                    {{ patient_form.first_name }}
+                    {% if patient_form.first_name.errors %}
+                        <span style="color: var(--danger); font-size: 0.875rem;">{{ patient_form.first_name.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ patient_form.last_name.label }}</label>
+                    {{ patient_form.last_name }}
+                    {% if patient_form.last_name.errors %}
+                        <span style="color: var(--danger); font-size: 0.875rem;">{{ patient_form.last_name.errors.0 }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem; margin-top: 1.5rem;">Basic Information</h3>
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label class="form-label">{{ patient_form.date_of_birth.label }}</label>
+                    {{ patient_form.date_of_birth }}
+                    {% if patient_form.date_of_birth.errors %}
+                        <span style="color: var(--danger); font-size: 0.875rem;">{{ patient_form.date_of_birth.errors.0 }}</span>
                     {% endif %}
                 </div>
                 <div class="form-group">
@@ -37,24 +77,36 @@
                     {% endif %}
                 </div>
             </div>
-        </div>
-
-        <div class="card" style="margin-bottom: 2rem;">
-            <h2 style="color: var(--secondary); margin-bottom: 1.5rem;">Clinical Information</h2>
-            <div class="form-group">
-                <label class="form-label">{{ patient_form.chief_complaint.label }}</label>
-                {{ patient_form.chief_complaint }}
-                {% if patient_form.chief_complaint.errors %}
-                    <span style="color: var(--danger); font-size: 0.875rem;">{{ patient_form.chief_complaint.errors.0 }}</span>
-                {% endif %}
+            
+            <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem; margin-top: 1.5rem;">Contact Information</h3>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">{{ patient_form.phone_number.label }}</label>
+                    {{ patient_form.phone_number }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ patient_form.email.label }}</label>
+                    {{ patient_form.email }}
+                </div>
             </div>
             <div class="form-group">
-                <label class="form-label">{{ patient_form.symptoms.label }}</label>
-                {{ patient_form.symptoms }}
-                {% if patient_form.symptoms.errors %}
-                    <span style="color: var(--danger); font-size: 0.875rem;">{{ patient_form.symptoms.errors.0 }}</span>
-                {% endif %}
+                <label class="form-label">{{ patient_form.address.label }}</label>
+                {{ patient_form.address }}
             </div>
+            
+            <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem; margin-top: 1.5rem;">Emergency Contact</h3>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">{{ patient_form.emergency_contact_name.label }}</label>
+                    {{ patient_form.emergency_contact_name }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ patient_form.emergency_contact_phone.label }}</label>
+                    {{ patient_form.emergency_contact_phone }}
+                </div>
+            </div>
+            
+            <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem; margin-top: 1.5rem;">Medical History</h3>
             <div class="form-group">
                 <label class="form-label">{{ patient_form.past_medical_history.label }}</label>
                 {{ patient_form.past_medical_history }}
@@ -63,9 +115,28 @@
                 <label class="form-label">{{ patient_form.medications.label }}</label>
                 {{ patient_form.medications }}
             </div>
+        </div>
+        {% endif %}
+
+        <div class="card" style="margin-bottom: 2rem;">
+            <h2 style="color: var(--secondary); margin-bottom: 1.5rem;">{% if is_follow_up %}Current Visit Details{% else %}Initial Visit{% endif %}</h2>
             <div class="form-group">
-                <label class="form-label">{{ patient_form.clinical_notes.label }}</label>
-                {{ patient_form.clinical_notes }}
+                <label class="form-label">{{ visit_form.chief_complaint.label }}</label>
+                {{ visit_form.chief_complaint }}
+                {% if visit_form.chief_complaint.errors %}
+                    <span style="color: var(--danger); font-size: 0.875rem;">{{ visit_form.chief_complaint.errors.0 }}</span>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label">{{ visit_form.symptoms.label }}</label>
+                {{ visit_form.symptoms }}
+                {% if visit_form.symptoms.errors %}
+                    <span style="color: var(--danger); font-size: 0.875rem;">{{ visit_form.symptoms.errors.0 }}</span>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label">{{ visit_form.clinical_notes.label }}</label>
+                {{ visit_form.clinical_notes }}
             </div>
         </div>
 
@@ -108,7 +179,7 @@
         </div>
 
         <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-            <a href="{% url 'home' %}" class="btn btn-secondary">Cancel</a>
+            <a href="{% url 'patient_list' %}" class="btn btn-secondary">Cancel</a>
             <button type="submit" class="btn btn-primary">Save and Generate Diagnosis</button>
         </div>
     </form>

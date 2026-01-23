@@ -4,11 +4,16 @@
 
 {% block content %}
 <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-        <h1 class="card-header" style="margin-bottom: 0;">All Patients</h1>
-        {% if user.profile.role == 'DOCTOR' or user.profile.role == 'ADMIN' %}
-        <a href="{% url 'patient_input' %}" class="btn btn-primary">Add New Patient</a>
-        {% endif %}
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h1 class="card-header" style="margin: 0;">{% if is_archived %}Archived Patients{% else %}Patient List{% endif %}</h1>
+        <div style="display: flex; gap: 1rem;">
+            {% if is_archived %}
+            <a href="{% url 'patient_list' %}" class="btn btn-secondary">View Active Patients</a>
+            {% else %}
+            <a href="{% url 'patient_archived_list' %}" class="btn btn-secondary">View Archived</a>
+            <a href="{% url 'patient_input' %}" class="btn btn-primary">Add New Patient</a>
+            {% endif %}
+        </div>
     </div>
 
     <form method="get" style="margin-bottom: 2rem;">
@@ -48,10 +53,12 @@
         <thead>
             <tr>
                 <th>Patient ID</th>
+                <th>Name</th>
                 <th>Age</th>
                 <th>Sex</th>
-                <th>Chief Complaint</th>
-                <th>Created Date</th>
+                <th>Initial Complaint</th>
+                <th>First Visit</th>
+                <th>Total Visits</th>
                 <th>Diagnoses</th>
                 <th>Actions</th>
             </tr>
@@ -59,22 +66,36 @@
         <tbody>
             {% for patient in patients %}
             <tr>
-                <td><a href="{% url 'patient_detail' patient.patient_id %}">{{ patient.patient_id }}</a></td>
+                <td><strong><a href="{% url 'patient_detail' patient.patient_id %}">{{ patient.patient_id }}</a></strong></td>
+                <td>{{ patient.get_full_name }}</td>
                 <td>{{ patient.age }}</td>
                 <td>{{ patient.get_sex_display }}</td>
-                <td>{{ patient.chief_complaint|truncatewords:8 }}</td>
-                <td>{{ patient.created_at|date:"M d, Y" }}</td>
+                <td>{{ patient.visits.first.chief_complaint|truncatewords:8|default:"N/A" }}</td>
+                <td>{{ patient.latest_visit_date|date:"M d, Y"|default:patient.created_at|date:"M d, Y" }}</td>
+                <td>
+                    <span class="badge {% if patient.visit_count > 1 %}badge-high{% else %}badge-moderate{% endif %}">{{ patient.visit_count }}</span>
+                </td>
                 <td>
                     {% with patient.diagnosis_results.count as count %}
                         {% if count > 0 %}
                             <span class="badge badge-low">{{ count }}</span>
                         {% else %}
-                            <span class="badge badge-medium">0</span>
+                            <span class="badge badge-moderate">0</span>
                         {% endif %}
                     {% endwith %}
                 </td>
                 <td>
-                    <a href="{% url 'patient_detail' patient.patient_id %}" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">View</a>
+                    <div style="display: flex; gap: 0.5rem;">
+                        {% if is_archived %}
+                        <form method="post" action="{% url 'patient_restore' patient.patient_id %}" style="margin: 0;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Restore</button>
+                        </form>
+                        {% else %}
+                        <a href="{% url 'patient_detail' patient.patient_id %}" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">View</a>
+                        <a href="{% url 'patient_delete' patient.patient_id %}" class="btn" style="background: #ff9800; color: white; border: none; padding: 0.5rem 1rem; font-size: 0.875rem;">Archive</a>
+                        {% endif %}
+                    </div>
                 </td>
             </tr>
             {% endfor %}

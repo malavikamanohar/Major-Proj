@@ -35,7 +35,7 @@
         {% if job.diagnosis %}
             <a href="{% url 'diagnosis_result' job.diagnosis.id %}" class="btn btn-primary">Open Diagnosis</a>
         {% elif job.status == 'FAILED' %}
-            <a href="{% url 'generate_diagnosis' patient.patient_id %}" class="btn btn-secondary">Retry</a>
+            <a href="{% url 'generate_diagnosis' patient.patient_id visit.visit_number %}" class="btn btn-secondary">Retry</a>
         {% else %}
             <form method="get" action="">
                 <button type="submit" class="btn btn-secondary">Refresh Status</button>

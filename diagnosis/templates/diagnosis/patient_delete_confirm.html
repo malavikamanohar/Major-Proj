@@ -1,0 +1,44 @@
+{% extends 'diagnosis/base.html' %}
+
+{% block title %}Delete Patient - {{ patient.patient_id }}{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 600px; margin: 2rem auto;">
+    <h1 class="card-header" style="color: #ff9800;">⚠️ Archive Patient</h1>
+    
+    <div style="margin-top: 1.5rem;">
+        <div style="background: rgba(255, 152, 0, 0.1); border-left: 4px solid #ff9800; padding: 1rem; margin-bottom: 1.5rem;">
+            <p style="font-weight: 600; margin-bottom: 0.5rem;">This patient will be archived (not permanently deleted)</p>
+            <p style="margin: 0; font-size: 0.9rem; color: var(--text-muted);">
+                The patient and all associated data (visits, vitals, labs, diagnoses) will be moved to the archived list. You can restore the patient at any time from the "Archived Patients" page.
+            </p>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+            <h3 style="color: var(--secondary); margin-bottom: 1rem;">Patient Information</h3>
+            <div style="background: rgba(0,0,0,0.1); padding: 1rem; border-radius: 8px;">
+                <p><strong>Patient ID:</strong> {{ patient.patient_id }}</p>
+                <p><strong>Name:</strong> {{ patient.get_full_name }}</p>
+                <p><strong>Age:</strong> {{ patient.age }} years</p>
+                <p><strong>Sex:</strong> {{ patient.get_sex_display }}</p>
+                {% if patient.phone_number %}
+                <p><strong>Phone:</strong> {{ patient.phone_number }}</p>
+                {% endif %}
+                <p style="margin: 0;"><strong>Total Visits:</strong> {{ visit_count }}</p>
+            </div>
+        </div>
+
+        <form method="post" style="margin-top: 2rem;">
+            {% csrf_token %}
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <button type="submit" class="btn" style="background: #ff9800; color: white; border: none; padding: 0.75rem 2rem;">
+                    Yes, Archive Patient
+                </button>
+                <a href="{% url 'patient_detail' patient.patient_id %}" class="btn btn-secondary" style="padding: 0.75rem 2rem;">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

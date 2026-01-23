@@ -28,7 +28,7 @@ class DiagnosisJobService:
 
         close_old_connections()
         try:
-            job = DiagnosisJob.objects.select_related("patient").get(pk=job_id)
+            job = DiagnosisJob.objects.select_related("visit__patient").get(pk=job_id)
         except DiagnosisJob.DoesNotExist:
             logger.warning("DiagnosisJob %s disappeared before processing", job_id)
             return
@@ -36,17 +36,17 @@ class DiagnosisJobService:
         if job.status in [DiagnosisJob.Status.COMPLETED, DiagnosisJob.Status.FAILED]:
             return
 
-        patient = job.patient
-        vitals = getattr(patient, "vitals", None)
-        labs = getattr(patient, "labs", None)
+        visit = job.visit
+        vitals = getattr(visit, "vitals", None)
+        labs = getattr(visit, "labs", None)
 
-        fingerprint = job.case_fingerprint or CaseFingerprintService.generate(patient, vitals, labs)
+        fingerprint = job.case_fingerprint or CaseFingerprintService.generate(visit, vitals, labs)
         if job.case_fingerprint != fingerprint:
             job.case_fingerprint = fingerprint
             job.save(update_fields=["case_fingerprint", "updated_at"])
 
         try:
-            summary_text = ClinicalSummaryGenerator.generate(patient, vitals, labs)
+            summary_text = ClinicalSummaryGenerator.generate(visit, vitals, labs)
             rag_service = RAGService()
             embedding = rag_service.generate_embedding(summary_text)
             embedding_binary = rag_service.numpy_to_binary(embedding)
@@ -57,7 +57,7 @@ class DiagnosisJobService:
                 try:
                     with transaction.atomic():
                         ClinicalSummary.objects.update_or_create(
-                            patient=patient,
+                            visit=visit,
                             defaults={"summary_text": summary_text, "embedding": embedding_binary},
                         )
                     break
@@ -76,7 +76,7 @@ class DiagnosisJobService:
             )
             if existing_result:
                 cloned = DiagnosisResult.objects.create(
-                    patient=patient,
+                    visit=visit,
                     source_result=existing_result,
                     case_fingerprint=fingerprint,
                     differential_diagnoses=existing_result.differential_diagnoses,
@@ -102,7 +102,7 @@ class DiagnosisJobService:
             diagnosis_payload = llm_service.generate_diagnosis(summary_text, retrieved_cases)
 
             diagnosis = DiagnosisResult.objects.create(
-                patient=patient,
+                visit=visit,
                 case_fingerprint=fingerprint,
                 differential_diagnoses=diagnosis_payload["differential_diagnoses"],
                 triage_level=diagnosis_payload["triage_level"],

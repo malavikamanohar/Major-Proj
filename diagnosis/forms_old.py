@@ -4,7 +4,7 @@ Forms for patient data input and authentication
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
-from .models import Patient, Visit, Vitals, Labs, UserProfile
+from .models import Patient, Vitals, Labs, UserProfile
 
 
 class RegistrationForm(UserCreationForm):
@@ -52,33 +52,18 @@ class LoginForm(forms.Form):
 
 
 class PatientForm(forms.ModelForm):
-    """Form for patient demographic data only"""
+    """Form for patient demographic and clinical data"""
     
     class Meta:
         model = Patient
         fields = [
-            'patient_id', 'first_name', 'last_name', 'date_of_birth', 'age', 'sex',
-            'phone_number', 'email', 'address',
-            'emergency_contact_name', 'emergency_contact_phone',
-            'past_medical_history', 'medications'
+            'patient_id', 'age', 'sex', 'chief_complaint', 
+            'symptoms', 'past_medical_history', 'medications', 'clinical_notes'
         ]
         widgets = {
             'patient_id': forms.TextInput(attrs={
                 'class': 'form-input',
-                'placeholder': 'e.g., P-ER-001'
-            }),
-            'first_name': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'First name'
-            }),
-            'last_name': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'Last name'
-            }),
-            'date_of_birth': forms.DateInput(attrs={
-                'class': 'form-input',
-                'type': 'date',
-                'placeholder': 'YYYY-MM-DD'
+                'placeholder': 'e.g., PT-2026-001'
             }),
             'age': forms.NumberInput(attrs={
                 'class': 'form-input',
@@ -87,26 +72,15 @@ class PatientForm(forms.ModelForm):
             'sex': forms.Select(attrs={
                 'class': 'form-select'
             }),
-            'phone_number': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'Phone number'
-            }),
-            'email': forms.EmailInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'Email address (optional)'
-            }),
-            'address': forms.Textarea(attrs={
+            'chief_complaint': forms.Textarea(attrs={
                 'class': 'form-textarea',
-                'rows': 2,
-                'placeholder': 'Full address (optional)'
+                'rows': 3,
+                'placeholder': 'Main reason for visit'
             }),
-            'emergency_contact_name': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'Emergency contact name (optional)'
-            }),
-            'emergency_contact_phone': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'Emergency contact phone (optional)'
+            'symptoms': forms.Textarea(attrs={
+                'class': 'form-textarea',
+                'rows': 4,
+                'placeholder': 'Describe all symptoms in detail'
             }),
             'past_medical_history': forms.Textarea(attrs={
                 'class': 'form-textarea',
@@ -117,26 +91,6 @@ class PatientForm(forms.ModelForm):
                 'class': 'form-textarea',
                 'rows': 3,
                 'placeholder': 'Current medications and dosages'
-            }),
-        }
-
-
-class VisitForm(forms.ModelForm):
-    """Form for visit/encounter clinical data"""
-    
-    class Meta:
-        model = Visit
-        fields = ['chief_complaint', 'symptoms', 'clinical_notes']
-        widgets = {
-            'chief_complaint': forms.Textarea(attrs={
-                'class': 'form-textarea',
-                'rows': 3,
-                'placeholder': 'Main reason for visit'
-            }),
-            'symptoms': forms.Textarea(attrs={
-                'class': 'form-textarea',
-                'rows': 4,
-                'placeholder': 'Describe all symptoms in detail'
             }),
             'clinical_notes': forms.Textarea(attrs={
                 'class': 'form-textarea',
@@ -196,5 +150,30 @@ class LabsForm(forms.ModelForm):
                 'class': 'form-textarea',
                 'rows': 6,
                 'placeholder': 'Enter lab results (e.g., WBC: 12.5, Hgb: 14.2, etc.)'
+            }),
+        }
+
+
+class FollowUpForm(forms.ModelForm):
+    """Simplified form for follow-up visits - only current visit data"""
+    
+    class Meta:
+        model = Patient
+        fields = ['chief_complaint', 'symptoms', 'clinical_notes']
+        widgets = {
+            'chief_complaint': forms.Textarea(attrs={
+                'class': 'form-textarea',
+                'rows': 3,
+                'placeholder': 'Current reason for this follow-up visit'
+            }),
+            'symptoms': forms.Textarea(attrs={
+                'class': 'form-textarea',
+                'rows': 4,
+                'placeholder': 'Current symptoms at this visit'
+            }),
+            'clinical_notes': forms.Textarea(attrs={
+                'class': 'form-textarea',
+                'rows': 4,
+                'placeholder': 'Clinical observations for this visit'
             }),
         }

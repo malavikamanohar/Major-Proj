@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Patient, Vitals, Labs, ClinicalSummary, KnowledgeCase, DiagnosisResult, LLMUsage, UserProfile
+from .models import Patient, Visit, Vitals, Labs, ClinicalSummary, KnowledgeCase, DiagnosisResult, DiagnosisJob, LLMUsage, UserProfile
 
 
 @admin.register(UserProfile)
@@ -20,24 +20,45 @@ class LLMUsageAdmin(admin.ModelAdmin):
 
 @admin.register(Patient)
 class PatientAdmin(admin.ModelAdmin):
-    list_display = ['patient_id', 'age', 'sex', 'chief_complaint', 'created_at']
-    search_fields = ['patient_id', 'chief_complaint']
+    list_display = ['patient_id', 'last_name', 'first_name', 'age', 'sex', 'phone_number', 'created_at']
+    search_fields = ['patient_id', 'first_name', 'last_name', 'phone_number', 'email']
     list_filter = ['sex', 'created_at']
+    fieldsets = (
+        ('Identification', {
+            'fields': ('patient_id', 'first_name', 'last_name', 'date_of_birth', 'age', 'sex')
+        }),
+        ('Contact Information', {
+            'fields': ('phone_number', 'email', 'address')
+        }),
+        ('Emergency Contact', {
+            'fields': ('emergency_contact_name', 'emergency_contact_phone')
+        }),
+        ('Medical History', {
+            'fields': ('past_medical_history', 'medications')
+        }),
+    )
+
+
+@admin.register(Visit)
+class VisitAdmin(admin.ModelAdmin):
+    list_display = ['patient', 'visit_number', 'visit_type', 'chief_complaint', 'created_at']
+    search_fields = ['patient__patient_id', 'chief_complaint']
+    list_filter = ['visit_type', 'created_at']
 
 
 @admin.register(Vitals)
 class VitalsAdmin(admin.ModelAdmin):
-    list_display = ['patient', 'blood_pressure_systolic', 'blood_pressure_diastolic', 'heart_rate', 'recorded_at']
+    list_display = ['visit', 'blood_pressure_systolic', 'blood_pressure_diastolic', 'heart_rate', 'recorded_at']
 
 
 @admin.register(Labs)
 class LabsAdmin(admin.ModelAdmin):
-    list_display = ['patient', 'recorded_at']
+    list_display = ['visit', 'recorded_at']
 
 
 @admin.register(ClinicalSummary)
 class ClinicalSummaryAdmin(admin.ModelAdmin):
-    list_display = ['patient', 'created_at']
+    list_display = ['visit', 'created_at']
 
 
 @admin.register(KnowledgeCase)
@@ -48,6 +69,13 @@ class KnowledgeCaseAdmin(admin.ModelAdmin):
 
 @admin.register(DiagnosisResult)
 class DiagnosisResultAdmin(admin.ModelAdmin):
-    list_display = ['patient', 'triage_level', 'confidence_score', 'created_at']
+    list_display = ['visit', 'triage_level', 'confidence_score', 'created_at']
     list_filter = ['triage_level', 'created_at']
+
+
+@admin.register(DiagnosisJob)
+class DiagnosisJobAdmin(admin.ModelAdmin):
+    list_display = ['id', 'visit', 'status', 'created_by', 'created_at']
+    list_filter = ['status', 'created_at']
+    search_fields = ['id', 'visit__patient__patient_id']
 

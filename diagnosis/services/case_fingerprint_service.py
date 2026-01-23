@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 
 
 class CaseFingerprintService:
-    """Build a normalized fingerprint for a patient presentation."""
+    """Build a normalized fingerprint for a visit presentation."""
 
     @staticmethod
     def _normalize_text(value: Optional[str]) -> str:
@@ -23,7 +23,10 @@ class CaseFingerprintService:
             return None
 
     @classmethod
-    def build_payload(cls, patient, vitals=None, labs=None) -> Dict[str, Any]:
+    def build_payload(cls, visit, vitals=None, labs=None) -> Dict[str, Any]:
+        """Build fingerprint payload from visit + patient data"""
+        patient = visit.patient
+        
         vitals_payload = {}
         if vitals:
             vitals_payload = {
@@ -41,18 +44,19 @@ class CaseFingerprintService:
         payload = {
             "age_bucket": cls._bucket(patient.age),
             "sex": patient.sex,
-            "chief_complaint": cls._normalize_text(patient.chief_complaint),
-            "symptoms": cls._normalize_text(patient.symptoms),
+            "chief_complaint": cls._normalize_text(visit.chief_complaint),
+            "symptoms": cls._normalize_text(visit.symptoms),
             "history": cls._normalize_text(patient.past_medical_history),
             "medications": cls._normalize_text(patient.medications),
-            "notes": cls._normalize_text(patient.clinical_notes),
+            "notes": cls._normalize_text(visit.clinical_notes),
             "vitals": vitals_payload,
             "labs": labs_payload,
         }
         return payload
 
     @classmethod
-    def generate(cls, patient, vitals=None, labs=None) -> str:
-        payload = cls.build_payload(patient, vitals, labs)
+    def generate(cls, visit, vitals=None, labs=None) -> str:
+        """Generate SHA256 fingerprint for a visit presentation"""
+        payload = cls.build_payload(visit, vitals, labs)
         serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
