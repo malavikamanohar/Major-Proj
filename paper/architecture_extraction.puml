@@ -1,0 +1,39 @@
+@startuml
+skinparam dpi 300
+skinparam componentStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontSize 10
+
+title Clinical Summary Extraction Pipeline
+
+start
+
+:Raw EHR Text Input;
+
+partition "9-Step Extraction" {
+    :1. Vital Abnormality Detection;
+    
+    :2. Medical Term Normalization;
+    
+    :3. Temporal Extraction;
+    
+    :4. Symptom Quantification;
+    
+    :5. Clinical Relevance Filtering;
+    
+    :6. Negation Detection;
+    
+    :7. Anatomical Location;
+    
+    :8. Lab Value Interpretation;
+    
+    :9. Text Normalization;
+}
+
+:Structured Clinical Summary;
+
+:Template Formatting;
+
+stop
+
+@enduml

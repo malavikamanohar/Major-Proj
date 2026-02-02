@@ -1,0 +1,13 @@
+flowchart TD
+    A[Raw Patient Data] --> B[Feature Extraction Layer]
+    B --> C[Clinical Summary<br/>200-500 tokens]
+    C --> D[MedEmbed-large-v0.1<br/>1024-dim vector]
+    D --> E[FAISS Index<br/>L2 Search]
+    E --> F[Top-K Similar Cases<br/>K=5]
+    F --> G[Retrieved Cases<br/>with Similarity Scores]
+    
+    H[Previous Visit Context] --> C
+    
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style C fill:#bbf,stroke:#333,stroke-width:2px
+    style G fill:#bfb,stroke:#333,stroke-width:2px

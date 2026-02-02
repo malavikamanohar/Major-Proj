@@ -1,0 +1,42 @@
+@startuml
+skinparam dpi 300
+skinparam componentStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontSize 11
+
+title RAG System Architecture for Emergency Diagnosis
+
+package "Input Layer" {
+    [Patient Data\n---\nDemographics\nVital Signs\nLab Results\nSymptoms\nMedical History] as PD
+}
+
+package "Clinical Summary Layer" {
+    [Feature Extraction\n---\nVital Abnormality Detection\nMedical Term Normalization\nTemporal Extraction\nSymptom Quantification\nNegation Detection] as FE
+    
+    [Historical Context Module\n---\nPrevious Visit Summaries\nSymptom Evolution Tracking\nTemporal Tags] as HC
+    
+    [Structured Summary\n---\nChief Complaint\nKey Symptoms\nAbnormal Vitals\nCritical Labs\nRelevant History] as SS
+}
+
+package "Embedding & Retrieval" {
+    [MedEmbed Model\n---\n1024-dim\nMedical-Specific\nPubMed + MIMIC-III] as EM
+    
+    database "FAISS Vector DB\n---\nIndexFlatL2\nL2 Distance\nKnowledge Base Vectors" as VDB
+    
+    [Top-K Retrieval\n---\nK = 5\nSimilarity Ranking] as TK
+}
+
+package "Output" {
+    [Similar\nPatient Records] as SPR
+}
+
+PD --> FE : Raw EHR Text
+PD --> HC : Follow-up Visit?
+FE --> SS : Extracted Features
+HC --> SS : Append History
+SS --> EM : Structured Text
+EM --> VDB : Query Vector
+VDB --> TK : Similar Vectors
+TK --> SPR : Top-5 Results
+
+@enduml

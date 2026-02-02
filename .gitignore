@@ -53,3 +53,7 @@ Thumbs.db
 #Misc
 rough_note.md
 work.md
+
+# Latex
+*.bbl
+*.blg
