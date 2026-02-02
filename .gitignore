@@ -57,3 +57,4 @@ work.md
 # Latex
 *.bbl
 *.blg
+*.aux
